@@ -57,6 +57,14 @@ class DesignSpec:
     metric: str
     guardrails: tuple[str, ...] = ()
     if_flat: str | None = None
+    # The analysis choices, declared before anyone looks. Defaults reproduce what
+    # stats.py did when they were hardcoded, so an unspecified spec changes nothing.
+    alpha: float = 0.05
+    control_value: bool | int | str = False
+    covariate: str | None = None
+    looks: int = 1
+    ratio: float = 1.0
+    daily_traffic: int | None = None
 
     @pydantic.model_validator(mode="before")
     @classmethod
