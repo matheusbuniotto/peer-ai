@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # ty is not clean on this repo yet. The gate is that a diff must not make it
+      # worse, so this ceiling only ever moves down. Raising it needs a reason in
+      # the PR body — it's the one line a reviewer should argue with.
+      TY_MAX_DIAGNOSTICS: 24
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # prek scopes hooks to the diff, so it needs the merge base
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --locked
+
+      - name: hooks (scoped to the diff)
+        if: github.event_name == 'pull_request'
+        run: >
+          uv run prek run --show-diff-on-failure
+          --from-ref ${{ github.event.pull_request.base.sha }}
+          --to-ref ${{ github.event.pull_request.head.sha }}
+
+      - name: hooks (whole tree)
+        if: github.event_name != 'pull_request'
+        run: uv run prek run --all-files --show-diff-on-failure
+
+      - name: ty
+        run: |
+          count=$(uv run ty check --output-format concise --exit-zero | grep -cE ': error' || true)
+          echo "ty: $count diagnostics (ceiling $TY_MAX_DIAGNOSTICS)"
+          if [ "$count" -gt "$TY_MAX_DIAGNOSTICS" ]; then
+            echo "::error::this diff adds type errors — fix them or justify raising the ceiling"
+            uv run ty check --output-format concise --exit-zero
+            exit 1
+          fi
+
+      - name: tests
+        run: uv run pytest -m "not live and not docker" -q

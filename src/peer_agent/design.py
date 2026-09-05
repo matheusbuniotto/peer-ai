@@ -47,8 +47,10 @@ def simulate_design(
         arm = rng.random(spec.n_per_arm * 2) < 0.5
         rate = np.where(arm, p2, p1)
         converted = rng.random(len(arm)) < rate
-        result = stats.analyze(pd.DataFrame({"arm": arm, "converted": converted}))
-        rejections += result.p_value < _ALPHA
+        result = stats.analyze(
+            pd.DataFrame({"arm": arm, "converted": converted}), alpha=spec.alpha
+        )
+        rejections += result.p_value < spec.alpha
         estimates.append(result.lift)
 
     return SimulationResult(

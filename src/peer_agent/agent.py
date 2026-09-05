@@ -34,6 +34,10 @@ _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
 _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
 _SKILLS_DIR = Path(__file__).resolve().parents[2] / ".agents" / "skills"
 _REPORTS_DIR = Path("reports")
+_PREREG_PREAMBLE = (
+    "Pre-registered plan for this experiment. These choices were fixed before "
+    "anyone saw the data — follow them, and say so plainly if you depart from any."
+)
 
 
 def _files_capability() -> FileSystem:
@@ -126,8 +130,33 @@ class _RecordingCall(functools.partial):
         return result
 
 
-def _bind(tool: Any, calls: list[ToolCall], *bound_args: Any) -> Any:
-    call = _RecordingCall(tool.fn, *bound_args)
+def _spec_defaults(spec: DesignSpec | None) -> dict[str, dict[str, Any]]:
+    """
+    The analysis choices a pre-registration pins down, per tool. Bound as partial
+    keywords, so pydantic-ai reports them to the model as the *defaults* — it can
+    still override one, and the override lands in the trajectory where a reader
+    can see the departure from plan.
+
+    `check_srm` and `check_guardrails` keep their own alphas: a split check and a
+    safety check answer different questions from the primary metric, and reusing
+    the primary alpha for them would loosen both.
+    """
+    if spec is None:
+        return {}
+    common = {"control": spec.control_value}
+    primary = common | {"alpha": spec.alpha}
+    return {
+        "check_srm": common,
+        "check_novelty": common,
+        "check_guardrails": common,
+        "scan_segments": primary,
+        "analyze": primary | {"covariate": spec.covariate},
+        "sequential": primary | {"looks": spec.looks},
+    }
+
+
+def _bind(tool: Any, calls: list[ToolCall], *bound_args: Any, **bound_kwargs: Any) -> Any:
+    call = _RecordingCall(tool.fn, *bound_args, **bound_kwargs)
     call.__name__ = tool.fn.__name__
     call.__qualname__ = tool.fn.__qualname__
     call.__doc__ = tool.fn.__doc__
@@ -195,9 +224,20 @@ class Agent:
             ],
         )
 
-    def review(self, case: Any, question: str = "Review this experiment.") -> Trajectory:
+    def review(
+        self,
+        case: Any,
+        spec: DesignSpec | None = None,
+        question: str = "Review this experiment.",
+    ) -> Trajectory:
         calls: list[ToolCall] = []
-        pai_tools = [PaiTool(_bind(t, calls, case.df), takes_ctx=False) for t in self.tools]
+        defaults = _spec_defaults(spec)
+        pai_tools = [
+            PaiTool(_bind(t, calls, case.df, **defaults.get(t.name, {})), takes_ctx=False)
+            for t in self.tools
+        ]
+        if spec is not None:
+            question = f"{_PREREG_PREAMBLE}\n\n{spec}\n\n{question}"
 
         def adapter(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             del info
@@ -235,7 +275,7 @@ class Agent:
             # split is a prompting question, not a guarantee — enforce it here so the
             # invariant holds regardless of what the model decides to write.
             answer = _NUMBER_RE.sub("[redacted]", answer)
-        traj = Trajectory(calls=calls, answer=answer, done=True, verdict=verdict)
+        traj = Trajectory(calls=calls, answer=answer, done=True, verdict=verdict, spec=spec)
         _log_trajectory("review", traj)
         return traj
 

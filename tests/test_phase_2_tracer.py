@@ -29,6 +29,8 @@ Still not here: the sandbox, MCP, the eval harness, the report page. All phase 3
 
 from __future__ import annotations
 
+import dataclasses
+
 import numpy as np
 import pytest
 from conftest import args_for, called_before, names, quotes_number
@@ -133,19 +135,21 @@ def test_cuped_narrows_the_interval():
 # --------------------------------------------------------------------------- #
 
 
-def spec(**overrides):
-    base = {
-        "baseline": 0.12,
-        "mde": 0.08,
-        "power": 0.80,
-        "days": 14,
-        "n_per_arm": 18_000,
-        "unit": BY_USER,
-        "metric": "purchase_rate",
-        "guardrails": ("latency_p95",),
-        "if_flat": "keep the current flow",
-    }
-    return DesignSpec(**{**base, **overrides})
+_BASE_SPEC = DesignSpec(
+    baseline=0.12,
+    mde=0.08,
+    power=0.80,
+    days=14,
+    n_per_arm=18_000,
+    unit=BY_USER,
+    metric="purchase_rate",
+    guardrails=("latency_p95",),
+    if_flat="keep the current flow",
+)
+
+
+def spec(**overrides) -> DesignSpec:
+    return dataclasses.replace(_BASE_SPEC, **overrides)
 
 
 @pytest.mark.slow
