@@ -36,8 +36,10 @@ BY_SESSION = RandomizationUnit.BY_SESSION
 class SRMResult:
     mismatch: bool
     p_value: float
-    n_control: int
-    n_treatment: int
+    counts: tuple[tuple[str, int], ...] = ()
+    # Per-stratum verdicts when `by` was given. A split can balance overall and
+    # still tilt inside a segment, which is how Simpson's paradox arrives.
+    strata: tuple[tuple[str, bool], ...] = ()
 
 
 @dataclass(frozen=True)
