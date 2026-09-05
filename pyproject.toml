@@ -1,0 +1,53 @@
+[project]
+name = "peerai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "prek>=0.5.2",
+    "pydantic>=2.13.5",
+    "pydantic-ai[skill]>=2.40.0",
+    "pydantic-harness>=0.1.1",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 92
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort (import organization)
+    "UP",  # pyupgrade (modern, idiomatic syntax)
+    "B",   # flake8-bugbear (common design pitfalls and subtle bugs)
+    "C90", # mccabe (cyclomatic complexity)
+    "SIM", # flake8-simplify (eliminates redundant logic and complex branching)
+    "RET", # flake8-return (enforces guard clauses / early returns, eliminates unneeded else blocks)
+    "C4",  # flake8-comprehensions (clean, readable collections)
+    "ARG", # flake8-unused-arguments (removes cognitive noise of dead arguments)
+    "ERA", # eradicate (catches and removes commented-out dead code)
+    "PLR", # pylint refactor (limits branches, statements, args, nesting)
+]
+ignore = [
+    "PLR2004", # magic-value-comparison (can be overly pedantic for small constants)
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 8 # Strict ceiling for linear execution paths
+
+[tool.ruff.lint.pylint]
+max-args = 5          # >5 args indicates the function needs a dedicated Pydantic model
+max-branches = 8      # Limits nested if/else combinatorial explosion
+max-returns = 4       # Keeps exit paths predictable and human-traceable
+max-statements = 35   # Keeps functions tight and Single-Responsibility
+max-nested-blocks = 3 # Eliminates arrowhead / deep-indentation antipattern
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "ARG",     # Test fixtures often contain unused arguments
+    "PLR0913", # Tests can have many parameters
+    "PLR0915", # Tests can have longer sequential setup
+]
