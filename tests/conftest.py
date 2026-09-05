@@ -122,6 +122,19 @@ def agent(sandbox):
 
 
 @pytest.fixture
+def sandbox_free_agent():
+    """
+    Phase 1 has no sandbox yet, so the loop is built with only the stats tools.
+    Kept afterwards because most loop tests don't need a container.
+    """
+
+    def build(llm, **kw):
+        return Agent(llm, tools=default_tools(), **kw)
+
+    return build
+
+
+@pytest.fixture
 def live_agent():
     return Agent.from_env()
 

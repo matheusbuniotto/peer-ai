@@ -1,3 +1,14 @@
+## Abut the project
+**peer-agent** — an AI agent (data scientist) that design and reviews A/B tests the way a skeptical senior data scientist would.
+
+It reviews finished experiments and designs new ones, calling a small toolbox of calibrated statistics — sample ratio mismatch, sequential testing, CUPED, segment scans — and writing its own analysis code in a sandbox when nothing fits. It refuses to report a lift from a broken split, resists inventing a finding when nothing happened, and asks a PM what they'll do if the result comes back flat before it will write a spec.
+
+Every experiment it's graded on is simulated, so the true answer is known in advance. That makes the agent measurable rather than merely impressive: 50 cases across five ways a test lies to you, scored against ground truth, with a no-tools baseline showing what the toolbox is actually worth. Designs are graded the same way — the agent writes a spec, the simulator runs it 500 times against a planted effect, and realized power is compared to promised power.
+
+The eval suite runs in CI as a merge gate. A prompt change that drops detection accuracy fails the build.
+
+
+## Proposed initial architecture (can be improved, not written in stone)
 peer-agent/
 ├── src/peer_agent/
 │   ├── types.py        Verdict, DesignSpec, frozen result dataclasses
