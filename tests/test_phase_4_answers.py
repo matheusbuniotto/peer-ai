@@ -51,6 +51,16 @@ def test_a_figure_from_nowhere_is_caught():
     assert unsupported_numbers(traj) == ("4.2%", "11.8%")
 
 
+def test_a_grouped_number_is_one_figure_not_three():
+    """
+    A sample size is exactly the figure a reader trusts on sight, and models
+    write it with separators. Split on the commas, "50,000" reads as a 50 too
+    small to check beside a 000, and "1,234,567" gets reported as 234 and 567.
+    """
+    assert unsupported_numbers(answer("We enrolled 50,000 users.")) == ("50,000",)
+    assert unsupported_numbers(answer("Across 1,234,567 sessions.")) == ("1,234,567",)
+
+
 def test_prose_integers_are_not_statistics():
     """Ordered lists, arm counts and run lengths are writing, not findings."""
     traj = answer(

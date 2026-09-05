@@ -33,7 +33,10 @@ from peer_agent.types import DesignSpec, Verdict
 
 _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z_]+)")
 _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
-_LITERAL_RE = re.compile(r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(%?)")
+# Thousands separators have to be part of the literal. Without them "50,000"
+# reads as a 50 (too small to check) beside a 000, so a sample size invented
+# whole sails through, and "1,234,567" gets reported as the figures 234 and 567.
+_LITERAL_RE = re.compile(r"(?<![\w.,])(-?\d{1,3}(?:,\d{3})+|-?\d+)(\.\d+)?\s*(%?)")
 _LIST_MARKER_RE = re.compile(r"^(\s*)\d+\.(\s)", re.MULTILINE)
 _DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 # Significance levels, confidence levels and even splits turn up in any write-up
@@ -179,20 +182,20 @@ def unsupported_numbers(traj: Trajectory) -> tuple[str, ...]:
     computed = _computed(traj.calls)
     prose = _DATE_RE.sub("", _LIST_MARKER_RE.sub(r"\1#\2", traj.answer))
     unsupported = []
-    for literal, percent in _LITERAL_RE.findall(prose):
-        _, _, fraction = literal.partition(".")
-        written = float(literal)
-        checkable = fraction or percent or abs(written) >= 100
+    for whole, fraction, percent in _LITERAL_RE.findall(prose):
+        written = float(whole.replace(",", "") + fraction)
+        grouped = "," in whole
+        checkable = fraction or percent or grouped or abs(written) >= 100
         a_year = not fraction and not percent and 1900 <= written <= 2100
         if not checkable or a_year or abs(written) in _CONVENTIONAL:
             continue
-        decimals = len(fraction)
+        decimals = len(fraction.lstrip("."))
         if not any(
             _agrees(abs(written), value * scale, decimals)
             for value in computed
             for scale in (1, 100)
         ):
-            unsupported.append(literal + percent)
+            unsupported.append(whole + fraction + percent)
     return tuple(unsupported)
 
 
