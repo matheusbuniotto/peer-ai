@@ -269,9 +269,9 @@ def _spec_defaults(spec: DesignSpec | None) -> dict[str, dict[str, Any]]:
     return {
         "check_srm": common,
         "check_novelty": common,
-        "check_guardrails": common,
+        "check_guardrails": common | {"guardrails": spec.guardrails},
         "scan_segments": primary,
-        "analyze": primary | {"covariate": spec.covariate},
+        "analyze": primary | {"covariate": spec.covariate, "mde": spec.mde},
         "sequential": primary | {"looks": spec.looks},
     }
 

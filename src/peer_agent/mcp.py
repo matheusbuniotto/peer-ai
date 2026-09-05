@@ -15,7 +15,7 @@ from mcp.types import TextContent, TextResourceContents
 from peer_agent import design, stats
 from peer_agent.sandbox import Sandbox
 from peer_agent.tools import UNANSWERED
-from peer_agent.types import DesignSpec
+from peer_agent.types import DesignSpec, Guardrail
 
 _PROTOCOL_PATH = resources.files("peer_agent") / "skills" / "review-protocol" / "SKILL.md"
 
@@ -60,8 +60,10 @@ def check_novelty(path: str) -> dict[str, Any]:
 
 
 @server.tool()
-def check_guardrails(path: str, guardrails: tuple[str, ...] = ()) -> dict[str, Any]:
-    """Check whether any named guardrail metric regressed."""
+def check_guardrails(
+    path: str, guardrails: tuple[Guardrail | str, ...] = ()
+) -> dict[str, Any]:
+    """Check whether any guardrail could still be moving past its margin."""
     return _asdict(stats.check_guardrails(pd.read_parquet(path), guardrails))
 
 

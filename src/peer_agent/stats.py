@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+from typing import Literal, cast
+
 import numpy as np
 import pandas as pd
 import tea_tasting as tt
+from tea_tasting.metrics.mean import MeanResult
+from tea_tasting.metrics.proportion import SampleRatioResult
 
 from peer_agent.types import (
     AnalyzeResult,
+    Guardrail,
     GuardrailResult,
+    GuardrailStatus,
     NoveltyResult,
     SegmentScanResult,
     SequentialResult,
@@ -20,13 +26,29 @@ CONTROL: bool | int | str = False  # the `arm` value meaning control, absent a s
 _CUPED_COVARIATE = "pre_period_metric"
 
 
+def _measure(
+    metric: tt.Mean, df: pd.DataFrame, control: bool | int | str, key: str
+) -> MeanResult:
+    """
+    tea-tasting types Experiment.analyze()[...] as the MetricResult protocol,
+    which carries none of the fields every caller here reads. One cast, in one
+    place, instead of the same unchecked attribute access in six.
+    """
+    return cast(
+        MeanResult, tt.Experiment({key: metric}, variant="arm").analyze(df, control)[key]
+    )
+
+
 def check_srm(
     df: pd.DataFrame, *, control: bool | int | str = CONTROL, alpha: float = SRM_ALPHA
 ) -> SRMResult:
     """Check whether the traffic split matches the assigned ratio."""
-    result = tt.Experiment({"sample_ratio": tt.SampleRatio()}, variant="arm").analyze(
-        df, control
-    )["sample_ratio"]
+    result = cast(
+        SampleRatioResult,
+        tt.Experiment({"sample_ratio": tt.SampleRatio()}, variant="arm").analyze(
+            df, control
+        )["sample_ratio"],
+    )
     return SRMResult(
         mismatch=result.pvalue < alpha,
         p_value=result.pvalue,
@@ -42,21 +64,46 @@ def analyze(  # noqa: PLR0913 (each argument is one pre-registered choice)
     covariate: str | None = None,
     control: bool | int | str = CONTROL,
     alpha: float = ALPHA,
+    mde: float | None = None,
 ) -> AnalyzeResult:
-    """Run the primary conversion-rate test, treatment vs. control."""
+    """
+    Run the primary conversion-rate test, treatment vs. control.
+
+    Given the pre-registered `mde`, also answer the question a p-value can't:
+    is the effect small enough to call this a real null? That's two one-sided
+    tests, so the interval it needs is the 1-2*alpha one, not the reported one.
+    """
     covariate = covariate or (_CUPED_COVARIATE if cuped else None)
     # tea-tasting's own `alpha` is power-analysis only; the interval is set by
     # confidence_level, so the pre-registered alpha has to arrive that way.
     metric = tt.Mean("converted", covariate, confidence_level=1 - alpha)
-    result = tt.Experiment({"conversion": metric}, variant="arm").analyze(df, control)[
-        "conversion"
-    ]
+    result = _measure(metric, df, control, "conversion")
     return AnalyzeResult(
         p_value=result.pvalue,
         lift=result.rel_effect_size,
         ci_low=result.rel_effect_size_ci_lower,
         ci_high=result.rel_effect_size_ci_upper,
         width=result.rel_effect_size_ci_upper - result.rel_effect_size_ci_lower,
+        equivalent_to_null=_equivalent(df, covariate, control, alpha, mde),
+        mde=mde,
+    )
+
+
+def _equivalent(
+    df: pd.DataFrame,
+    covariate: str | None,
+    control: bool | int | str,
+    alpha: float,
+    mde: float | None,
+) -> bool | None:
+    """TOST: the 1-2*alpha interval sits entirely inside the indifference zone."""
+    if mde is None:
+        return None
+    metric = tt.Mean("converted", covariate, confidence_level=1 - 2 * alpha)
+    tost = _measure(metric, df, control, "conversion")
+    bound = abs(mde)
+    return bool(
+        tost.rel_effect_size_ci_lower > -bound and tost.rel_effect_size_ci_upper < bound
     )
 
 
@@ -120,30 +167,75 @@ def check_novelty(
 
 def check_guardrails(
     df: pd.DataFrame,
-    guardrails: tuple[str, ...] = (),
+    guardrails: tuple[Guardrail | str, ...] = (),
     *,
     control: bool | int | str = CONTROL,
     alpha: float = GUARDRAIL_ALPHA,
 ) -> GuardrailResult:
-    """Check whether any named guardrail metric regressed."""
-    # Provisional: not exercised by any in-scope test. A guardrail "breaches" if
-    # it has its own column and treatment moves it down significantly.
-    breached = tuple(
-        name
-        for name in guardrails
-        if name in df.columns and _regressed(df, name, control=control, alpha=alpha)
+    """
+    Check whether any guardrail can still be moving against us by more than its
+    margin.
+
+    This is a non-inferiority question, not a superiority one. Asking "did it
+    drop significantly?" fails open: a guardrail down 7% with an interval
+    reaching -13% answers no, because an underpowered test can't reject, and
+    ships the regression. So a guardrail is CLEAN only when harm past the margin
+    is ruled out, BREACHED when harm past the margin is established, and
+    INCONCLUSIVE otherwise — which blocks, exactly like a breach does.
+    """
+    statuses, bounds = [], []
+    for guardrail in (_as_guardrail(g) for g in guardrails):
+        status, bound = _judge(df, guardrail, control=control, alpha=alpha)
+        statuses.append((guardrail.name, status))
+        bounds.append((guardrail.name, bound))
+    return GuardrailResult(
+        statuses=tuple(statuses),
+        bounds=tuple(bounds),
+        blocks_ship=any(s is not GuardrailStatus.CLEAN for _, s in statuses),
     )
-    return GuardrailResult(breached=breached)
 
 
-def _regressed(
+def _as_guardrail(guardrail: Guardrail | str) -> Guardrail:
+    return Guardrail(name=guardrail) if isinstance(guardrail, str) else guardrail
+
+
+def _judge(
     df: pd.DataFrame,
-    column: str,
+    guardrail: Guardrail,
     *,
-    control: bool | int | str = CONTROL,
-    alpha: float = GUARDRAIL_ALPHA,
-) -> bool:
-    result = tt.Experiment({column: tt.Mean(column)}, variant="arm").analyze(df, control)[
-        column
-    ]
-    return result.pvalue < alpha and result.rel_effect_size < 0
+    control: bool | int | str,
+    alpha: float,
+) -> tuple[GuardrailStatus, float]:
+    """The status and the bound on the harmful side of the interval."""
+    if guardrail.name not in df.columns:
+        # A guardrail nobody measured is not a guardrail that passed.
+        return GuardrailStatus.INCONCLUSIVE, float("nan")
+
+    low, high = _one_sided_bounds(df, guardrail.name, control=control, alpha=alpha)
+    down_is_bad = guardrail.direction == "down_is_bad"
+    # Read every guardrail as though a fall were the harm, so one rule covers both.
+    harmful, opposite = (low, high) if down_is_bad else (-high, -low)
+    tolerated = -guardrail.margin
+
+    if harmful > tolerated:
+        status = GuardrailStatus.CLEAN
+    elif opposite < tolerated:
+        status = GuardrailStatus.BREACHED
+    else:
+        status = GuardrailStatus.INCONCLUSIVE
+    return status, (low if down_is_bad else high)
+
+
+def _one_sided_bounds(
+    df: pd.DataFrame, column: str, *, control: bool | int | str, alpha: float
+) -> tuple[float, float]:
+    """Both one-sided bounds on the relative move, each at level `alpha`."""
+
+    def side(alternative: Literal["greater", "less"]) -> MeanResult:
+        metric = tt.Mean(column, alternative=alternative, confidence_level=1 - alpha)
+        return _measure(metric, df, control, column)
+
+    return (
+        side("greater").rel_effect_size_ci_lower,
+        side("less").rel_effect_size_ci_upper,
+    )

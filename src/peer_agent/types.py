@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
+from typing import Literal
 
 import pydantic
 
 
 class Verdict(Enum):
-    NO_EFFECT = auto()
+    NO_EFFECT = auto()  # the interval excludes the MDE: a real null, not a shrug
+    INCONCLUSIVE = auto()  # the interval covers both zero and the MDE: not enough data
     INVALID = auto()
     SHIP = auto()
     EXTEND = auto()
@@ -44,6 +47,10 @@ class AnalyzeResult:
     ci_low: float
     ci_high: float
     width: float
+    # None when no MDE was pre-registered, in which case "not significant" is the
+    # most that can be said and NO_EFFECT is not available as a verdict.
+    equivalent_to_null: bool | None = None
+    mde: float | None = None
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
@@ -55,7 +62,7 @@ class DesignSpec:
     n_per_arm: int
     unit: RandomizationUnit
     metric: str
-    guardrails: tuple[str, ...] = ()
+    guardrails: tuple[Guardrail, ...] = ()
     if_flat: str | None = None
     # The analysis choices, declared before anyone looks. Defaults reproduce what
     # stats.py did when they were hardcoded, so an unspecified spec changes nothing.
@@ -71,6 +78,14 @@ class DesignSpec:
     def _parse_if_stringified(cls, data: object) -> object:
         """Some models emit a nested object arg as a JSON string; decode it here."""
         return json.loads(data) if isinstance(data, str) else data
+
+    @pydantic.field_validator("guardrails", mode="before")
+    @classmethod
+    def _lift_bare_names(cls, value: object) -> object:
+        """A guardrail named as a plain string gets the default margin."""
+        if isinstance(value, str | bytes) or not isinstance(value, Iterable):
+            return value
+        return tuple({"name": item} if isinstance(item, str) else item for item in value)
 
 
 @dataclass(frozen=True)
@@ -93,9 +108,32 @@ class NoveltyResult:
     late_lift: float
 
 
+class GuardrailStatus(StrEnum):
+    CLEAN = "clean"  # harm worse than the margin is ruled out
+    BREACHED = "breached"  # harm worse than the margin is established
+    INCONCLUSIVE = "inconclusive"  # too wide to tell — blocks, exactly like a breach
+
+
+@pydantic.dataclasses.dataclass(frozen=True)
+class Guardrail:
+    """
+    A metric that must not move against us by more than `margin` (relative).
+    Naming one without a margin is naming a wish, so the margin has a default
+    rather than being optional.
+    """
+
+    name: str
+    margin: float = 0.03
+    direction: Literal["down_is_bad", "up_is_bad"] = "down_is_bad"
+
+
 @dataclass(frozen=True)
 class GuardrailResult:
-    breached: tuple[str, ...]
+    statuses: tuple[tuple[str, GuardrailStatus], ...] = ()
+    # The bound on the harmful side of each guardrail's interval — the number a
+    # reader needs to judge the call for themselves.
+    bounds: tuple[tuple[str, float], ...] = ()
+    blocks_ship: bool = False
 
 
 @dataclass(frozen=True)
