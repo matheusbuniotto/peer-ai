@@ -32,7 +32,7 @@ from peer_agent.types import DesignSpec, Verdict
 _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z_]+)")
 _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
 _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
-_SKILLS_DIR = Path(__file__).resolve().parents[2] / ".agents" / "skills"
+_SKILLS_DIR = Path(str(resources.files("peer_agent").joinpath("skills")))
 _REPORTS_DIR = Path("reports")
 _PREREG_PREAMBLE = (
     "Pre-registered plan for this experiment. These choices were fixed before "

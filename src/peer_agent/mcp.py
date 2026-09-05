@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import sys
-from pathlib import Path
+from importlib import resources
 from typing import Any
 
 import pandas as pd
@@ -16,13 +16,7 @@ from peer_agent import design, stats
 from peer_agent.sandbox import Sandbox
 from peer_agent.types import DesignSpec
 
-_PROTOCOL_PATH = (
-    Path(__file__).resolve().parents[2]
-    / ".agents"
-    / "skills"
-    / "review-protocol"
-    / "SKILL.md"
-)
+_PROTOCOL_PATH = resources.files("peer_agent") / "skills" / "review-protocol" / "SKILL.md"
 
 server = MCPServer("peer-agent")
 

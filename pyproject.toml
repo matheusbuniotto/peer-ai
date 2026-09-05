@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "prek>=0.5.2",
     "pydantic>=2.13.5",
     "pydantic-ai[skill]>=2.40.0",
     "numpy>=2.1",
@@ -13,13 +12,15 @@ dependencies = [
     "tea-tasting>=0.9",
     "pyarrow>=18.0",
     "scipy>=1.14",
-    "ty>=0.0.78",
     "pydantic-ai-harness[skills]>=0.29.0",
     "pyyaml>=6.0",
 ]
 
+[project.scripts]
+peer = "peer_agent.cli:main"
+
 [dependency-groups]
-dev = ["pytest>=8.3"]
+dev = ["pytest>=8.3", "prek>=0.5.2", "ty>=0.0.78"]
 
 [build-system]
 requires = ["hatchling"]

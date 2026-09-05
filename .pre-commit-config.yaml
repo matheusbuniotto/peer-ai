@@ -22,7 +22,7 @@ repos:
     hooks:
       - id: peer-eval-gate
         name: peer eval regression gate
-        entry: uv run python -m peer_agent eval --gate
+        entry: uv run peer eval --gate
         language: system
         pass_filenames: false
         always_run: true
