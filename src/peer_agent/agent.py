@@ -23,6 +23,7 @@ from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.usage import UsageLimits
 from pydantic_ai_harness import Skills
+from pydantic_ai_harness.filesystem import FileSystem
 
 from peer_agent.sandbox import Sandbox
 from peer_agent.tools import analysis_tools, design_tools
@@ -32,6 +33,17 @@ _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z_]+)")
 _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
 _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
 _SKILLS_DIR = Path(__file__).resolve().parents[2] / ".agents" / "skills"
+_REPORTS_DIR = Path("reports")
+
+
+def _files_capability() -> FileSystem:
+    """
+    Lets the model write its own review/design write-up to disk when asked
+    ("save this as a report") — pydantic-ai-harness's own FileSystem tool,
+    scoped to reports/ so it can't touch anything else in the repo.
+    """
+    _REPORTS_DIR.mkdir(exist_ok=True)
+    return FileSystem(root_dir=_REPORTS_DIR)
 
 
 class OverBudget(Exception):
@@ -177,7 +189,10 @@ class Agent:
             self.llm,
             tools=pai_tools,
             system_prompt=_PROMPT,
-            capabilities=[Skills(_SKILLS_DIR, include=["review-protocol"])],
+            capabilities=[
+                Skills(_SKILLS_DIR, include=["review-protocol"]),
+                _files_capability(),
+            ],
         )
 
     def review(self, case: Any, question: str = "Review this experiment.") -> Trajectory:
@@ -195,7 +210,10 @@ class Agent:
             self._model(adapter),
             tools=pai_tools,
             system_prompt=_PROMPT,
-            capabilities=[Skills(_SKILLS_DIR, include=["review-protocol"])],
+            capabilities=[
+                Skills(_SKILLS_DIR, include=["review-protocol"]),
+                _files_capability(),
+            ],
         )
         try:
             result = pai_agent.run_sync(
@@ -238,7 +256,10 @@ class Agent:
             tools=pai_tools,
             output_type=DesignSpec | str,
             system_prompt=_PROMPT,
-            capabilities=[Skills(_SKILLS_DIR, include=["design-protocol"])],
+            capabilities=[
+                Skills(_SKILLS_DIR, include=["design-protocol"]),
+                _files_capability(),
+            ],
         )
         try:
             result = pai_agent.run_sync(

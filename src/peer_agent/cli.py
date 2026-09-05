@@ -48,6 +48,31 @@ def _print_trajectory(traj: Trajectory) -> None:
     print(traj.answer)
 
 
+def _trajectory_markdown(title: str, traj: Trajectory) -> str:
+    lines = [f"# {title}", ""]
+    if traj.verdict is not None:
+        lines += [f"**Verdict: {traj.verdict.name}**", ""]
+    elif traj.spec is not None:
+        lines += ["**Spec:**", "", "```", str(traj.spec), "```", ""]
+    lines += [traj.answer, ""]
+    if traj.calls:
+        lines += ["## Trajectory", ""]
+        lines += [
+            f"{i}. `{c.name}({c.args})` → `{c.result!r}`"
+            for i, c in enumerate(traj.calls, 1)
+        ]
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _write_trajectory(out: str | None, title: str, traj: Trajectory) -> None:
+    if out is None:
+        return
+    path = Path(out)
+    path.write_text(_trajectory_markdown(title, traj))
+    print(f"\nwrote {path}")
+
+
 def _review(args: argparse.Namespace) -> int:
     df = pd.read_parquet(args.path)
     case = Case(df=df, truth=Verdict.NO_EFFECT)
@@ -55,12 +80,16 @@ def _review(args: argparse.Namespace) -> int:
         agent = Agent(_ScriptedFakeLLM(), tools=default_tools())
     else:
         agent = Agent.from_env()
-    _print_trajectory(agent.review(case))
+    traj = agent.review(case)
+    _print_trajectory(traj)
+    _write_trajectory(args.out, f"Review — {args.path}", traj)
     return 0
 
 
 def _design(args: argparse.Namespace) -> int:
-    _print_trajectory(Agent.from_env().design(args.brief))
+    traj = Agent.from_env().design(args.brief)
+    _print_trajectory(traj)
+    _write_trajectory(args.out, f"Design — {args.brief}", traj)
     return 0
 
 
@@ -116,10 +145,16 @@ def main(argv: list[str] | None = None) -> int:
 
     review = sub.add_parser("review", help="Review a finished experiment.")
     review.add_argument("path")
+    review.add_argument(
+        "-o", "--out", help="Write the verdict + trajectory to this markdown file."
+    )
     review.set_defaults(fn=_review)
 
     design = sub.add_parser("design", help="Design a new experiment from a brief.")
     design.add_argument("brief")
+    design.add_argument(
+        "-o", "--out", help="Write the spec + trajectory to this markdown file."
+    )
     design.set_defaults(fn=_design)
 
     chat = sub.add_parser("chat", help="Interactive terminal chat with the agent.")
