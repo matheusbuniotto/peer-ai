@@ -8,11 +8,14 @@ dependencies = [
     "prek>=0.5.2",
     "pydantic>=2.13.5",
     "pydantic-ai[skill]>=2.40.0",
-    "pydantic-harness>=0.1.1",
     "numpy>=2.1",
     "pandas>=2.2",
     "tea-tasting>=0.9",
     "pyarrow>=18.0",
+    "scipy>=1.14",
+    "ty>=0.0.78",
+    "pydantic-ai-harness[skills]>=0.29.0",
+    "pyyaml>=6.0",
 ]
 
 [dependency-groups]

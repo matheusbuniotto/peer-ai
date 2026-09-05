@@ -17,3 +17,12 @@ repos:
         args: [--fix]
       # Deterministic code formatter (eliminates styling debates)
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: peer-eval-gate
+        name: peer eval regression gate
+        entry: uv run python -m peer_agent eval --gate
+        language: system
+        pass_filenames: false
+        always_run: true

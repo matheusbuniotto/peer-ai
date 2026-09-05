@@ -1,0 +1,10 @@
+{
+  "accuracy": 0.94,
+  "by_flaw": {
+    "srm": 0.9,
+    "novelty": 0.9,
+    "simpson": 0.9,
+    "peeking": 1.0,
+    "clean": 1.0
+  }
+}

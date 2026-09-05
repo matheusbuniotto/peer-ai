@@ -1,0 +1,100 @@
+{"case_id": "srm-01", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-01", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-02", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-02", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-03", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-03", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-04", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-04", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-05", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-05", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-06", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-06", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-07", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-07", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-08", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-08", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-09", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-09", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "srm-10", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."]}
+{"case_id": "srm-10", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-01", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-01", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-02", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "novelty-02", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-03", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-03", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-04", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-04", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-05", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-05", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-06", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-06", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-07", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-07", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-08", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-08", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-09", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-09", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "novelty-10", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], [["check_novelty", {}]], "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."]}
+{"case_id": "novelty-10", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-01", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-01", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-02", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-02", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-03", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-03", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-04", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-04", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-05", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "simpson-05", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-06", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-06", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-07", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-07", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-08", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-08", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-09", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-09", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-10", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "simpson-10", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-01", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-01", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-02", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-02", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-03", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-03", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-04", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-04", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-05", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-05", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-06", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-06", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-07", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-07", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-08", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-08", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-09", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-09", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-10", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "peeking-10", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-01", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-01", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-02", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-02", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-03", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-03", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-04", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-04", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-05", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-05", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: NO_EFFECT. No significant effect on the primary metric."]}
+{"case_id": "clean-06", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-06", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-07", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-07", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-08", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-08", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-09", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-09", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-10", "model": "claude-opus-5 (tools)", "turns": [[["check_srm", {}]], [["check_guardrails", {}]], [["analyze", {}]], "VERDICT: SHIP. A real, durable, guardrail-clean effect."]}
+{"case_id": "clean-10", "model": "claude-opus-5 (no tools)", "turns": ["VERDICT: SHIP. A real, durable, guardrail-clean effect."]}

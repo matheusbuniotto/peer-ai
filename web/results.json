@@ -1,0 +1,2686 @@
+{
+  "accuracy": 0.94,
+  "false_ships": 0.04,
+  "false_blocks": 0.0,
+  "by_flaw": {
+    "srm": 0.9,
+    "novelty": 0.9,
+    "simpson": 0.9,
+    "peeking": 1.0,
+    "clean": 1.0
+  },
+  "cases": [
+    {
+      "id": "srm-01",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.875064732600709e-68,
+              "n_control": 24990,
+              "n_treatment": 21230
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-02",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 6.207007639686053e-73,
+              "n_control": 25035,
+              "n_treatment": 21152
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-03",
+      "flaw": "srm",
+      "correct": false,
+      "truth": "INVALID",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 4.415639923546449e-65,
+              "n_control": 24960,
+              "n_treatment": 21295
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.6687133200769045,
+              "lift": -0.010720736477025428,
+              "ci_low": -0.058395661338636384,
+              "ci_high": 0.03936804563570173,
+              "width": 0.09776370697433812
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "srm-04",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 4.080767095616122e-73,
+              "n_control": 25075,
+              "n_treatment": 21184
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-05",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.1200155988616617e-62,
+              "n_control": 24889,
+              "n_treatment": 21297
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-06",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 8.243270979519479e-59,
+              "n_control": 24872,
+              "n_treatment": 21393
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-07",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.785549701369573e-70,
+              "n_control": 25061,
+              "n_treatment": 21241
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-08",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.0498494128244795e-79,
+              "n_control": 25140,
+              "n_treatment": 21075
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-09",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.4305219005664234e-65,
+              "n_control": 24952,
+              "n_treatment": 21274
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "srm-10",
+      "flaw": "srm",
+      "correct": true,
+      "truth": "INVALID",
+      "verdict": "INVALID",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": true,
+              "p_value": 1.622625369998126e-61,
+              "n_control": 24945,
+              "n_treatment": 21382
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "verdict",
+          "body": "VERDICT: INVALID. The traffic split doesn't match the assigned ratio."
+        }
+      ]
+    },
+    {
+      "id": "novelty-01",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 1.0,
+              "n_control": 30000,
+              "n_treatment": 30000
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.7375747878884666e-16,
+              "lift": 0.1899441340782122,
+              "ci_low": 0.14161939481982477,
+              "ci_high": 0.24031445913777616,
+              "width": 0.09869506431795139
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.33458599522551036,
+              "late_lift": 0.05410555949100093
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-02",
+      "flaw": "novelty",
+      "correct": false,
+      "truth": "EXTEND",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7781802104005457,
+              "n_control": 29965,
+              "n_treatment": 30035
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.5168052701266823e-06,
+              "lift": 0.10855226367464121,
+              "ci_low": 0.0629199839931982,
+              "ci_high": 0.15614358541031548,
+              "width": 0.09322360141711727
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "novelty-03",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.8799348009255424,
+              "n_control": 30019,
+              "n_treatment": 29981
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.170761898467022e-08,
+              "lift": 0.13017400058193407,
+              "ci_low": 0.0835907864677281,
+              "ci_high": 0.1787598118613336,
+              "width": 0.0951690253936055
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.2474590700872401,
+              "late_lift": 0.013696143452873732
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-04",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.3712877799069756,
+              "n_control": 30110,
+              "n_treatment": 29890
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 2.006028706381152e-14,
+              "lift": 0.17695246069013404,
+              "ci_low": 0.12876244531621617,
+              "ci_high": 0.22719984215678002,
+              "width": 0.09843739684056385
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.28240586100162557,
+              "late_lift": 0.06666115150905894
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-05",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6445686303888929,
+              "n_control": 29943,
+              "n_treatment": 30057
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.992244890720819e-09,
+              "lift": 0.13630749713398904,
+              "ci_low": 0.08978254709973799,
+              "ci_high": 0.18481868835135518,
+              "width": 0.09503614125161719
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.2840917945058987,
+              "late_lift": -0.006310817194142615
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-06",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7594628653799336,
+              "n_control": 29962,
+              "n_treatment": 30038
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.3005677509832244e-12,
+              "lift": 0.16278402713039797,
+              "ci_low": 0.11525132317325348,
+              "ci_high": 0.21234260444768238,
+              "width": 0.0970912812744289
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.3434191267071449,
+              "late_lift": -0.014268842317049946
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-07",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7844486364181824,
+              "n_control": 30034,
+              "n_treatment": 29966
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 7.21863216388057e-09,
+              "lift": 0.13086435552069164,
+              "ci_low": 0.08467428357490436,
+              "ci_high": 0.17902139836148834,
+              "width": 0.09434711478658397
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.22894503546099298,
+              "late_lift": 0.033599913024538575
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-08",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.35832646674888025,
+              "n_control": 30113,
+              "n_treatment": 29887
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 7.16072926780319e-08,
+              "lift": 0.12176139478878012,
+              "ci_low": 0.07580226647473598,
+              "ci_high": 0.1696839336116236,
+              "width": 0.09388166713688761
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.273746924446032,
+              "late_lift": -0.025492277784969097
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-09",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6213199995097771,
+              "n_control": 29939,
+              "n_treatment": 30061
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 4.071881459468069e-08,
+              "lift": 0.12333263458066202,
+              "ci_low": 0.07758032748021737,
+              "ci_high": 0.17102751018540396,
+              "width": 0.0934471827051866
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.2990653099391207,
+              "late_lift": -0.03677833046184642
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "novelty-10",
+      "flaw": "novelty",
+      "correct": true,
+      "truth": "EXTEND",
+      "verdict": "EXTEND",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.398069545492054,
+              "n_control": 29896,
+              "n_treatment": 30104
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 2.6377443652401983e-11,
+              "lift": 0.152485836215964,
+              "ci_low": 0.10530429057347557,
+              "ci_high": 0.20168139579850441,
+              "width": 0.09637710522502885
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "check_novelty",
+          "body": {
+            "args": {},
+            "result": {
+              "decaying": true,
+              "early_lift": 0.3404124473272001,
+              "late_lift": -0.02946262615591344
+            }
+          }
+        },
+        {
+          "turn": 4,
+          "act": "verdict",
+          "body": "VERDICT: EXTEND. The early effect is decaying \u2014 not durable enough to ship yet."
+        }
+      ]
+    },
+    {
+      "id": "simpson-01",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.532732459011656,
+              "n_control": 21778,
+              "n_treatment": 21647
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 3.715418275169546e-93,
+              "lift": 0.5587459864991868,
+              "ci_low": 0.49295815691839273,
+              "ci_high": 0.627432784481001,
+              "width": 0.1344746275626083
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-02",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6489899046317555,
+              "n_control": 21829,
+              "n_treatment": 21733
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 2.2245314544703836e-108,
+              "lift": 0.62930561326043,
+              "ci_low": 0.5591202574214049,
+              "ci_high": 0.7026504330027703,
+              "width": 0.14353017558136538
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-03",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.29878107124599584,
+              "n_control": 21917,
+              "n_treatment": 21699
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 5.121606825952459e-119,
+              "lift": 0.6771524019379229,
+              "ci_low": 0.6041084013916089,
+              "ci_high": 0.7535225031462502,
+              "width": 0.14941410175464132
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-04",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.30674326251728457,
+              "n_control": 21822,
+              "n_treatment": 21608
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.0625626632459863e-90,
+              "lift": 0.5556525708645064,
+              "ci_low": 0.48944798093023856,
+              "ci_high": 0.6247998938008539,
+              "width": 0.13535191287061532
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-05",
+      "flaw": "simpson",
+      "correct": false,
+      "truth": "NO_EFFECT",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.8402697800974965,
+              "n_control": 21734,
+              "n_treatment": 21691
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 9.031118941284585e-102,
+              "lift": 0.5971801409819899,
+              "ci_low": 0.529086184182717,
+              "ci_high": 0.6683064886304808,
+              "width": 0.1392203044477638
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "simpson-06",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.3302433136733256,
+              "n_control": 21634,
+              "n_treatment": 21838
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 4.420294904748277e-116,
+              "lift": 0.6529361139627545,
+              "ci_low": 0.5819408386802145,
+              "ci_high": 0.7271175571405799,
+              "width": 0.1451767184603654
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-07",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6518762050764588,
+              "n_control": 21753,
+              "n_treatment": 21658
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 1.046440284373098e-90,
+              "lift": 0.5598506766410822,
+              "ci_low": 0.4930284998506267,
+              "ci_high": 0.6296635554251444,
+              "width": 0.13663505557451772
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-08",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.19811214644838893,
+              "n_control": 21980,
+              "n_treatment": 21710
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 8.73461220368113e-108,
+              "lift": 0.6139981804473715,
+              "ci_low": 0.5456921256467748,
+              "ci_high": 0.6853227646465505,
+              "width": 0.13963063899977568
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-09",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.4175147628860618,
+              "n_control": 21641,
+              "n_treatment": 21811
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 3.067572785176303e-103,
+              "lift": 0.6003434298445989,
+              "ci_low": 0.532232876615472,
+              "ci_high": 0.6714816217127195,
+              "width": 0.1392487450972475
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "simpson-10",
+      "flaw": "simpson",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6206500532522714,
+              "n_control": 21603,
+              "n_treatment": 21707
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 3.183159315651497e-94,
+              "lift": 0.5720268232279437,
+              "ci_low": 0.5047157526464654,
+              "ci_high": 0.6423489477010664,
+              "width": 0.13763319505460103
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-01",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.5926498572846888,
+              "n_control": 19946,
+              "n_treatment": 20054
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.3720266595811687,
+              "lift": 0.02409673379610755,
+              "ci_low": -0.02807151275492159,
+              "ci_high": 0.07906511017553908,
+              "width": 0.10713662293046067
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-02",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.9960105938185183,
+              "n_control": 19999,
+              "n_treatment": 20001
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.4756259699424365,
+              "lift": -0.01920107482997946,
+              "ci_low": -0.07008209386757924,
+              "ci_high": 0.034463929848967956,
+              "width": 0.1045460237165472
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-03",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.5926498572846888,
+              "n_control": 20054,
+              "n_treatment": 19946
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.040875408466417816,
+              "lift": 0.056908325975652874,
+              "ci_low": 0.002290472664145504,
+              "ci_high": 0.11450247207025743,
+              "width": 0.11221199940611193
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-04",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7300943707316032,
+              "n_control": 20035,
+              "n_treatment": 19965
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.8115864999756848,
+              "lift": -0.006409116324090025,
+              "ci_low": -0.05757311270579213,
+              "ci_high": 0.047532553913313125,
+              "width": 0.10510566661910525
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-05",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.21313175023522601,
+              "n_control": 19875,
+              "n_treatment": 20125
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.18185166881704867,
+              "lift": 0.03674639883705555,
+              "ci_low": -0.01676070358120685,
+              "ci_high": 0.09316531531688588,
+              "width": 0.10992601889809273
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-06",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.15415720110414374,
+              "n_control": 19857,
+              "n_treatment": 20143
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.17930620853954635,
+              "lift": -0.03551528237726942,
+              "ci_low": -0.08509776336262775,
+              "ci_high": 0.016754286170251875,
+              "width": 0.10185204953287963
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-07",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.2648504217261324,
+              "n_control": 20112,
+              "n_treatment": 19888
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.6535793669117997,
+              "lift": -0.012264620963691075,
+              "ci_low": -0.06409094882472655,
+              "ci_high": 0.04243160996771933,
+              "width": 0.10652255879244588
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-08",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.26915958912879223,
+              "n_control": 20111,
+              "n_treatment": 19889
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.9742752656232856,
+              "lift": 0.0008649839603691589,
+              "ci_low": -0.05037459789637344,
+              "ci_high": 0.05486933468601296,
+              "width": 0.1052439325823864
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-09",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.3870387887869613,
+              "n_control": 19913,
+              "n_treatment": 20087
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.6350248009893749,
+              "lift": 0.012879494466517372,
+              "ci_low": -0.039256430918856444,
+              "ci_high": 0.0678446396387995,
+              "width": 0.10710107055765594
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "peeking-10",
+      "flaw": "peeking",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.26058903427361757,
+              "n_control": 19887,
+              "n_treatment": 20113
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.40231632319245125,
+              "lift": 0.02335075298546596,
+              "ci_low": -0.030469600147737252,
+              "ci_high": 0.0801587694367294,
+              "width": 0.11062836958446665
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-01",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.5926498572846888,
+              "n_control": 19946,
+              "n_treatment": 20054
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.3720266595811687,
+              "lift": 0.02409673379610755,
+              "ci_low": -0.02807151275492159,
+              "ci_high": 0.07906511017553908,
+              "width": 0.10713662293046067
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-02",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.9960105938185183,
+              "n_control": 19999,
+              "n_treatment": 20001
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.4756259699424365,
+              "lift": -0.01920107482997946,
+              "ci_low": -0.07008209386757924,
+              "ci_high": 0.034463929848967956,
+              "width": 0.1045460237165472
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-03",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.5926498572846888,
+              "n_control": 20054,
+              "n_treatment": 19946
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.040875408466417816,
+              "lift": 0.056908325975652874,
+              "ci_low": 0.002290472664145504,
+              "ci_high": 0.11450247207025743,
+              "width": 0.11221199940611193
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-04",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7300943707316032,
+              "n_control": 20035,
+              "n_treatment": 19965
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.8115864999756848,
+              "lift": -0.006409116324090025,
+              "ci_low": -0.05757311270579213,
+              "ci_high": 0.047532553913313125,
+              "width": 0.10510566661910525
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-05",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "NO_EFFECT",
+      "verdict": "NO_EFFECT",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.21313175023522601,
+              "n_control": 19875,
+              "n_treatment": 20125
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.18185166881704867,
+              "lift": 0.03674639883705555,
+              "ci_low": -0.01676070358120685,
+              "ci_high": 0.09316531531688588,
+              "width": 0.10992601889809273
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: NO_EFFECT. No significant effect on the primary metric."
+        }
+      ]
+    },
+    {
+      "id": "clean-06",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "SHIP",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.7530179061789584,
+              "n_control": 40045,
+              "n_treatment": 39955
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.0013626727831404129,
+              "lift": 0.062484562836490065,
+              "ci_low": 0.02378545333569182,
+              "ci_high": 0.10264649940840487,
+              "width": 0.07886104607271305
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "clean-07",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "SHIP",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.742303345688567,
+              "n_control": 40047,
+              "n_treatment": 39953
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.0002289369509989178,
+              "lift": 0.07199566228353582,
+              "ci_low": 0.03306612522568697,
+              "ci_high": 0.11239220016401585,
+              "width": 0.07932607493832888
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "clean-08",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "SHIP",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.47730591421651813,
+              "n_control": 40101,
+              "n_treatment": 39899
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.006563407053401367,
+              "lift": 0.052555905734518626,
+              "ci_low": 0.014386227450684519,
+              "ci_high": 0.09216184596756394,
+              "width": 0.07777561851687942
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "clean-09",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "SHIP",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.5501701161806982,
+              "n_control": 39915,
+              "n_treatment": 40085
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.06653239919148016,
+              "lift": 0.034899844957774206,
+              "ci_low": -0.0023417384066107827,
+              "ci_high": 0.07353161931729146,
+              "width": 0.07587335772390225
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    },
+    {
+      "id": "clean-10",
+      "flaw": "clean",
+      "correct": true,
+      "truth": "SHIP",
+      "verdict": "SHIP",
+      "trajectory": [
+        {
+          "turn": 0,
+          "act": "check_srm",
+          "body": {
+            "args": {},
+            "result": {
+              "mismatch": false,
+              "p_value": 0.6687970262796876,
+              "n_control": 39939,
+              "n_treatment": 40061
+            }
+          }
+        },
+        {
+          "turn": 1,
+          "act": "check_guardrails",
+          "body": {
+            "args": {
+              "guardrails": []
+            },
+            "result": {
+              "breached": []
+            }
+          }
+        },
+        {
+          "turn": 2,
+          "act": "analyze",
+          "body": {
+            "args": {
+              "cuped": false,
+              "covariate": null
+            },
+            "result": {
+              "p_value": 0.0144495352521762,
+              "lift": 0.04708085532691131,
+              "ci_low": 0.009174830000545864,
+              "ci_high": 0.08641068425333498,
+              "width": 0.07723585425278912
+            }
+          }
+        },
+        {
+          "turn": 3,
+          "act": "verdict",
+          "body": "VERDICT: SHIP. A real, durable, guardrail-clean effect."
+        }
+      ]
+    }
+  ],
+  "models": [
+    {
+      "name": "claude-opus-5 (tools)",
+      "accuracy": 0.94
+    },
+    {
+      "name": "claude-opus-5 (no tools)",
+      "accuracy": 0.6
+    }
+  ],
+  "published_failures": [
+    {
+      "case_id": "novelty-02",
+      "note": "scripted miss in the replay fixture"
+    },
+    {
+      "case_id": "simpson-05",
+      "note": "scripted miss in the replay fixture"
+    },
+    {
+      "case_id": "srm-03",
+      "note": "scripted miss in the replay fixture"
+    }
+  ],
+  "generated_at": "2026-09-05T17:02:02.521196+00:00"
+}

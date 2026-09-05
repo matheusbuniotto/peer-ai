@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>peer — eval report</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      line-height: 1.4;
+    }
+    h1 { margin-bottom: 0; }
+    .subtitle { color: #888; margin-top: 0.25rem; }
+
+    .summary { display: flex; gap: 2rem; flex-wrap: wrap; margin: 1.5rem 0; }
+    .stat { min-width: 8rem; }
+    .stat .value { font-size: 1.8rem; font-weight: 600; }
+    .stat .label { color: #888; font-size: 0.85rem; }
+
+    .bars { margin: 1.5rem 0; }
+    .bar-row { display: flex; align-items: center; gap: 0.75rem; margin: 0.35rem 0; }
+    .bar-row .name { width: 6rem; font-size: 0.9rem; }
+    .bar-track { flex: 1; background: #eee; border-radius: 3px; height: 0.9rem; overflow: hidden; }
+    .bar-fill { background: #4a7; height: 100%; }
+    .bar-row .pct { width: 3.5rem; text-align: right; font-size: 0.85rem; color: #666; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #f7f7f7; }
+    .ok { color: #2a7; }
+    .fail { color: #d33; }
+
+    .trajectory { display: none; background: #fafafa; padding: 0.75rem 1rem; }
+    .trajectory.open { display: table-row; }
+    .trajectory td { border-bottom: 1px solid #eee; }
+    .turn { font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; white-space: pre-wrap; margin: 0.4rem 0; }
+    .turn .act { font-weight: 600; }
+
+    #published { margin-top: 2rem; font-size: 0.9rem; color: #a00; }
+  </style>
+</head>
+<body>
+  <h1>peer — eval report</h1>
+  <p class="subtitle" id="generated-at"></p>
+
+  <div class="summary" id="summary"></div>
+  <div class="bars" id="by-flaw"></div>
+
+  <h2>Models</h2>
+  <table id="models"><tbody></tbody></table>
+
+  <h2>Cases</h2>
+  <p class="subtitle">Click a row to expand its trajectory.</p>
+  <table id="cases">
+    <thead>
+      <tr><th></th><th>id</th><th>flaw</th><th>truth</th><th>verdict</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="published"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
