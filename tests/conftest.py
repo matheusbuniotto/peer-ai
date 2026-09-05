@@ -18,6 +18,7 @@ The map of the codebase:
 from __future__ import annotations
 
 import pytest
+
 from peer_agent.agent import Agent
 from peer_agent.sandbox import Sandbox
 from peer_agent.sim import NOVELTY, SIMPSON, SRM, make_case
