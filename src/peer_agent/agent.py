@@ -3,8 +3,10 @@ from __future__ import annotations
 import dataclasses
 import functools
 import json
+import math
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -31,6 +33,15 @@ from peer_agent.types import DesignSpec, Verdict
 
 _VERDICT_RE = re.compile(r"VERDICT:\s*([A-Z_]+)")
 _NUMBER_RE = re.compile(r"-?\d+\.?\d*")
+_LITERAL_RE = re.compile(r"(?<![\w.])(-?\d+(?:\.\d+)?)\s*(%?)")
+_LIST_MARKER_RE = re.compile(r"^(\s*)\d+\.(\s)", re.MULTILINE)
+_DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
+# Significance levels, confidence levels and even splits turn up in any write-up
+# and belong to the protocol rather than to this dataset.
+_CONVENTIONAL = frozenset(
+    {0.0, 1.0, 5.0, 50.0, 95.0, 99.0, 100.0, 0.01, 0.05, 0.1, 0.5, 0.8, 0.9, 0.95, 0.99}
+)
+_REWRITES_ALLOWED = 1  # one chance to fix its own write-up before we redact it
 _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
 _SKILLS_DIR = Path(__file__).resolve().parents[2] / ".agents" / "skills"
 _REPORTS_DIR = Path("reports")
@@ -109,6 +120,113 @@ def _srm_broken(calls: list[ToolCall]) -> bool:
     return any(
         c.name == "check_srm" and getattr(c.result, "mismatch", False) for c in calls
     )
+
+
+def _numbers_in(obj: Any, found: set[float]) -> None:
+    if isinstance(obj, bool) or obj is None:
+        return
+    if isinstance(obj, int | float):
+        found.add(float(obj))
+    elif dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        _numbers_in(dataclasses.asdict(obj), found)
+    elif isinstance(obj, dict):
+        for value in obj.values():
+            _numbers_in(value, found)
+    elif isinstance(obj, list | tuple | set):
+        for value in obj:
+            _numbers_in(value, found)
+
+
+def _computed(calls: list[ToolCall]) -> set[float]:
+    """
+    Every number the toolbox touched. Arguments count alongside results: an alpha
+    the model passed in is as traceable as a p-value it got back, and excluding
+    them would flag "we tested at the pre-registered alpha" as an invention.
+    """
+    found: set[float] = set()
+    for call in calls:
+        _numbers_in(call.args, found)
+        _numbers_in(call.result, found)
+    return found
+
+
+def _agrees(written: float, computed: float, decimals: int) -> bool:
+    """Does `computed`, rounded or truncated the way the author wrote it, land on
+    `written`? Sign is ignored — "down 7%" is a fair reading of -0.0695."""
+    scale = 10**decimals
+    for value in (computed, -computed):
+        truncated = math.trunc(value * scale) / scale
+        if abs(round(value, decimals) - written) < 1e-9 or abs(truncated - written) < 1e-9:
+            return True
+    return False
+
+
+def unsupported_numbers(traj: Trajectory) -> tuple[str, ...]:
+    """
+    Numeric literals in the answer that no tool call accounts for, in the order
+    they were written.
+
+    A literal is checked when it carries a decimal point, wears a percent sign,
+    or is at least 100 — a bare small integer is prose ("two arms", "14 days",
+    an ordered-list marker), not a statistic, and checking those is all false
+    positives. It is supported when some number the toolbox produced or was
+    given reproduces it at the precision the author chose to write it at, either
+    as-is or scaled by 100 so a lift of -0.0695 covers "6.95%" and "7%".
+
+    The rule is deliberately generous: this is a guard against figures invented
+    whole, not an audit of arithmetic.
+    """
+    computed = _computed(traj.calls)
+    prose = _DATE_RE.sub("", _LIST_MARKER_RE.sub(r"\1#\2", traj.answer))
+    unsupported = []
+    for literal, percent in _LITERAL_RE.findall(prose):
+        _, _, fraction = literal.partition(".")
+        written = float(literal)
+        checkable = fraction or percent or abs(written) >= 100
+        a_year = not fraction and not percent and 1900 <= written <= 2100
+        if not checkable or a_year or abs(written) in _CONVENTIONAL:
+            continue
+        decimals = len(fraction)
+        if not any(
+            _agrees(abs(written), value * scale, decimals)
+            for value in computed
+            for scale in (1, 100)
+        ):
+            unsupported.append(literal + percent)
+    return tuple(unsupported)
+
+
+def _cite_the_toolbox(calls: list[ToolCall]) -> Callable[[str], str]:
+    """
+    An output validator: sends the model back to fix a write-up that quotes a
+    figure nothing computed, and strikes the figure out if it does it again.
+    """
+    rewrites = 0
+
+    def validate(output: str) -> str:
+        nonlocal rewrites
+        invented = unsupported_numbers(Trajectory(calls=calls, answer=output))
+        if not invented:
+            return output
+        rewrites += 1
+        if rewrites > _REWRITES_ALLOWED:
+            return _redact(output, invented)
+        raise ModelRetry(
+            f"No tool produced these figures in your answer: {', '.join(invented)}. "
+            "Measure them or drop them — do not estimate a number you have not "
+            "computed."
+        )
+
+    return validate
+
+
+def _redact(answer: str, invented: tuple[str, ...]) -> str:
+    """Last resort, once the model has had its chance: strike the figures out
+    rather than hand a reader a number nothing stands behind."""
+    for literal in invented:
+        number = re.escape(literal.rstrip("%"))
+        answer = re.sub(rf"(?<![\w.]){number}(?![\d.])", "[unsupported]", answer, count=1)
+    return answer
 
 
 class _RecordingCall(functools.partial):
@@ -255,6 +373,7 @@ class Agent:
                 _files_capability(),
             ],
         )
+        pai_agent.output_validator(_cite_the_toolbox(calls))
         try:
             result = pai_agent.run_sync(
                 question,
