@@ -101,6 +101,10 @@ class SequentialResult:
 class SegmentScanResult:
     winners: tuple[str, ...]
     reversal: bool
+    # Does one effect explain every segment? Low means no.
+    heterogeneity_p: float = float("nan")
+    # Per-segment split checks: a reversal in the outcome is often a skew in the counts.
+    composition_srm: tuple[tuple[str, bool], ...] = ()
 
 
 @dataclass(frozen=True)
