@@ -6,9 +6,10 @@ whether the tool's answer is right: given a known truth, repeated across seeds,
 does each check fire at the rate it claims to? Properties, not fixed outputs —
 a single seed can't tell a calibrated test from a lucky one.
 
-The xfails are the defects docs/plans/phase-4-plan.md exists to fix, written as
-executable evidence instead of prose. They are strict, so the day a fix lands
-the marker itself fails the build until someone deletes it.
+Each defect docs/plans/phase-4-plan.md names arrived here first as a strict
+xfail, so the fix had a definition of done that failed the build until it was
+real. All four have since flipped; what's left is the regression tests they
+turned into.
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ import pandas as pd
 import pytest
 
 from peer_agent import stats
-from peer_agent.sim import BASELINE, NOVELTY, SIMPSON, make_case
+from peer_agent.sim import BASELINE, NOVELTY, REPEATS, SIMPSON, make_case
 from peer_agent.types import Guardrail, GuardrailStatus
 
 SEEDS = range(200, 240)
@@ -84,21 +85,50 @@ def test_naming_the_control_arm_does_not_change_the_answer():
 
 
 # --------------------------------------------------------------------------- #
-# What doesn't — one xfail per plan item
+# What used to be wrong
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.xfail(strict=True, reason="A3: no clustering — see plan ticket 08")
-def test_duplicating_every_row_must_not_shrink_the_p_value():
+def test_counting_a_unit_twice_is_not_twice_the_evidence():
     """
-    The same experiment with each unit counted twice is not twice the evidence,
-    but nothing in stats.py knows that: on this seed the duplicate rows alone
-    carry a null result from p=0.082 to p=0.014 and manufacture a win. Any
-    dataset with repeat visitors is already this dataset.
+    On this seed the duplicate rows alone carried a null from p=0.082 to
+    p=0.014 and manufactured a win. Named the unit, the answer doesn't move.
     """
-    df = null_case(9, n=6_000)
+    df = null_case(9, n=6_000).assign(user_id=np.arange(6_000))
     doubled = pd.concat([df, df], ignore_index=True)
-    assert stats.analyze(doubled).p_value >= stats.analyze(df).p_value
+
+    once = stats.analyze(df, unit="user_id")
+    twice = stats.analyze(doubled, unit="user_id")
+
+    assert twice.p_value == pytest.approx(once.p_value)
+    assert twice.rows_per_unit == 2.0
+
+
+def test_repeat_visits_are_not_analysed_as_if_they_were_people():
+    """
+    Refusing beats quietly answering a question about rows. The message names
+    the column, so the model can fix the call rather than guess.
+    """
+    repeated = make_case(n=8_000, lift=0.0, seed=4, flaws=[REPEATS]).df
+
+    with pytest.raises(ValueError, match="user_id"):
+        stats.analyze(repeated)
+
+    result = stats.analyze(repeated, unit="user_id")
+    assert result.unit_of_analysis == "user_id"
+    assert result.rows_per_unit > 1
+
+
+def test_a_unit_landing_in_both_arms_is_a_leak_not_a_row_to_average():
+    contaminated = pd.DataFrame(
+        {
+            "user_id": [1, 1, 2, 3],
+            "arm": [True, False, True, False],
+            "converted": [True, False, True, False],
+        }
+    )
+    with pytest.raises(ValueError, match="both arms"):
+        stats.analyze(contaminated, unit="user_id")
 
 
 def test_novelty_does_not_fire_on_a_steady_effect():

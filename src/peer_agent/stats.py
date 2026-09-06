@@ -25,6 +25,8 @@ ALPHA = 0.05
 GUARDRAIL_ALPHA = 0.01
 CONTROL: bool | int | str = False  # the `arm` value meaning control, absent a spec
 _CUPED_COVARIATE = "pre_period_metric"
+# Columns that name a randomisation unit if the frame happens to carry one.
+_UNIT_COLUMNS = ("unit_id", "user_id", "visitor_id")
 
 
 def _measure(
@@ -98,14 +100,23 @@ def analyze(  # noqa: PLR0913 (each argument is one pre-registered choice)
     control: bool | int | str = CONTROL,
     alpha: float = ALPHA,
     mde: float | None = None,
+    unit: str | None = None,
 ) -> AnalyzeResult:
     """
     Run the primary conversion-rate test, treatment vs. control.
+
+    `unit` names the column the experiment randomised on. Rows are not evidence;
+    units are. If a user shows up on four rows, testing the rows understates the
+    variance and shrinks the p-value for free, so the rows are collapsed to one
+    row per unit first. When the frame plainly has repeat units and nobody said
+    which column identifies them, this refuses rather than quietly answering a
+    question about rows.
 
     Given the pre-registered `mde`, also answer the question a p-value can't:
     is the effect small enough to call this a real null? That's two one-sided
     tests, so the interval it needs is the 1-2*alpha one, not the reported one.
     """
+    df, rows_per_unit = _one_row_per_unit(df, unit)
     covariate = covariate or (_CUPED_COVARIATE if cuped else None)
     # tea-tasting's own `alpha` is power-analysis only; the interval is set by
     # confidence_level, so the pre-registered alpha has to arrive that way.
@@ -119,7 +130,33 @@ def analyze(  # noqa: PLR0913 (each argument is one pre-registered choice)
         width=result.rel_effect_size_ci_upper - result.rel_effect_size_ci_lower,
         equivalent_to_null=_equivalent(df, covariate, control, alpha, mde),
         mde=mde,
+        unit_of_analysis=unit or "row",
+        rows_per_unit=rows_per_unit,
     )
+
+
+def _one_row_per_unit(df: pd.DataFrame, unit: str | None) -> tuple[pd.DataFrame, float]:
+    """Collapse repeat rows onto the unit the experiment actually randomised."""
+    if unit is None:
+        for candidate in _UNIT_COLUMNS:
+            if candidate in df.columns and df[candidate].nunique() < len(df):
+                raise ValueError(
+                    f"'{candidate}' repeats across rows, so these rows are not "
+                    f"independent — call analyze with unit='{candidate}'"
+                )
+        return df, 1.0
+
+    units = df[unit].nunique()
+    grouped = df.groupby(unit, observed=True)
+    if (grouped.arm.nunique() > 1).any():
+        raise ValueError(f"some '{unit}' values appear in both arms — the split leaks")
+    how: dict[str, str] = {
+        column: "mean" if pd.api.types.is_numeric_dtype(dtype) else "first"
+        for column, dtype in df.dtypes.items()
+        if column != unit
+    }
+    how["arm"] = "first"
+    return grouped.agg(how).reset_index(), len(df) / units
 
 
 def _equivalent(

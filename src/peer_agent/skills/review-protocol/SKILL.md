@@ -27,7 +27,10 @@ Never skip steps. Never invent a number you haven't computed with a tool.
    `blocks_ship` on the result is the single flag to read. Report the bound,
    not just the status.
 3. **The primary metric.** Call `analyze` (and `sequential` if the
-   experiment has been running long enough to have been peeked at).
+   experiment has been running long enough to have been peeked at). If the
+   rows are visits rather than people, pass `unit` — the column the
+   experiment randomised on. Repeat rows are not repeat evidence, and
+   `analyze` will refuse rather than answer a question about rows.
    - Significant, durable, guardrails clean → SHIP. Scepticism that blocks
      everything is as useless as none at all.
    - A significant early effect that `check_novelty` flags as decaying is
