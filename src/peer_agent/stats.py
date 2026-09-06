@@ -208,19 +208,66 @@ def _cochran_q(results: list[AnalyzeResult], alpha: float) -> float:
 
 
 def check_novelty(
-    df: pd.DataFrame, *, control: bool | int | str = CONTROL
+    df: pd.DataFrame,
+    *,
+    control: bool | int | str = CONTROL,
+    alpha: float = ALPHA,
 ) -> NoveltyResult:
-    """Check whether an early effect is decaying over time."""
-    if "day" not in df.columns:
-        raise ValueError("check_novelty needs a 'day' column")
-    midpoint = df.day.max() // 2
-    early = analyze(df.loc[df.day <= midpoint], control=control)
-    late = analyze(df.loc[df.day > midpoint], control=control)
+    """
+    Check whether the effect is fading as the experiment runs.
+
+    Splitting the run in half and comparing two point estimates against a fixed
+    0.02 gap called a perfectly steady +6% lift "decaying" on 42% of seeds — two
+    noisy halves cross any fixed threshold routinely. This fits the daily lifts
+    against time, weighted by how well each day is measured, and asks whether
+    the slope is negative by more than its own uncertainty.
+
+    Measured on `cohort_day` where the data has one, since novelty decays on
+    days since a user's first exposure rather than on the calendar.
+    """
+    column = "cohort_day" if "cohort_day" in df.columns else "day"
+    if column not in df.columns:
+        raise ValueError("check_novelty needs a 'day' or 'cohort_day' column")
+
+    daily = [
+        (int(day), analyze(part, control=control, alpha=alpha))
+        for day, part in df.groupby(column, observed=True)
+        if part.arm.nunique() > 1
+    ]
+    slope, half_width = _weighted_trend(daily, alpha)
     return NoveltyResult(
-        decaying=early.lift > late.lift + 0.02,
-        early_lift=early.lift,
-        late_lift=late.lift,
+        decaying=slope + half_width < 0,
+        slope=slope,
+        slope_ci=(slope - half_width, slope + half_width),
+        daily_lifts=tuple((day, result.lift) for day, result in daily),
+        cohort_day=column == "cohort_day",
     )
+
+
+def _weighted_trend(
+    daily: list[tuple[int, AnalyzeResult]], alpha: float
+) -> tuple[float, float]:
+    """
+    Inverse-variance weighted least squares of lift on day. Returns the slope
+    and the half-width of its interval; a day measured badly pulls on the line
+    less than a day measured well.
+    """
+    z = sps.norm.ppf(1 - alpha / 2)
+    days = np.array([day for day, _ in daily], dtype=float)
+    lifts = np.array([r.lift for _, r in daily])
+    errors = np.array([(r.ci_high - r.ci_low) / (2 * z) for _, r in daily])
+
+    usable = np.isfinite(errors) & (errors > 0) & np.isfinite(lifts)
+    if usable.sum() < 3:
+        return float("nan"), float("nan")
+
+    days, lifts, weights = days[usable], lifts[usable], 1 / errors[usable] ** 2
+    centred = days - np.average(days, weights=weights)
+    spread = float(np.sum(weights * centred**2))
+    if spread <= 0:
+        return float("nan"), float("nan")
+    slope = float(np.sum(weights * centred * lifts) / spread)
+    return slope, float(z / np.sqrt(spread))
 
 
 def check_guardrails(
