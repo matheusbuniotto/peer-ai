@@ -46,7 +46,7 @@ _CONVENTIONAL = frozenset(
 )
 _REWRITES_ALLOWED = 1  # one chance to fix its own write-up before we redact it
 _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
-_SKILLS_DIR = Path(__file__).resolve().parents[2] / ".agents" / "skills"
+_SKILLS_DIR = Path(str(resources.files("peer_agent").joinpath("skills")))
 _REPORTS_DIR = Path("reports")
 _PREREG_PREAMBLE = (
     "Pre-registered plan for this experiment. These choices were fixed before "
