@@ -32,11 +32,11 @@ import sys
 
 import pytest
 from conftest import FakeLLM, names
+
+from peer_agent import stats
 from peer_agent.sim import SRM, make_case
 from peer_agent.tools import default_tools
 from peer_agent.types import Verdict
-
-from peer_agent import stats
 
 # --------------------------------------------------------------------------- #
 # The generator produces something with a known answer
