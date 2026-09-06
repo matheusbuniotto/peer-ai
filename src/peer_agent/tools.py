@@ -71,18 +71,34 @@ def analysis_tools(sandbox: object | None = None) -> list[Tool]:
     return tools
 
 
-def design_tools() -> list[Tool]:
+def design_tools(answerer: Callable[[str], str] | None = None) -> list[Tool]:
+    """Given an `answerer`, `ask` reaches a real person; without one it says so."""
     return [
         _from_function(design.power_analysis),
         _from_function(design.simulate_design),
-        _from_function(ask),
+        _from_function(_make_ask(answerer)),
     ]
 
 
-def ask(question: str) -> str:
-    """Ask the person requesting the design a clarifying question."""
-    del question
-    return "No answer available yet; proceed on your best judgement."
+UNANSWERED = (
+    "Nobody is available to answer that. Do not invent an answer and do not "
+    "assume one: put the question in your write-up as an open decision, and "
+    "mark anything that depends on it as provisional."
+)
+
+
+def _make_ask(answerer: Callable[[str], str] | None) -> FunctionType:
+    """
+    The old canned reply told the model to 'proceed on your best judgement',
+    which is the opposite of what asking is for — it taught the model to guess
+    the answer to the question it had just been told to escalate.
+    """
+
+    def ask(question: str) -> str:
+        """Ask the person requesting the design a clarifying question."""
+        return answerer(question) if answerer else UNANSWERED
+
+    return cast(FunctionType, ask)
 
 
 def _make_run_python(sandbox: Any) -> FunctionType:

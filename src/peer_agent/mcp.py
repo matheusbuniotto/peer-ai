@@ -14,6 +14,7 @@ from mcp.types import TextContent, TextResourceContents
 
 from peer_agent import design, stats
 from peer_agent.sandbox import Sandbox
+from peer_agent.tools import UNANSWERED
 from peer_agent.types import DesignSpec
 
 _PROTOCOL_PATH = (
@@ -98,7 +99,9 @@ def simulate_design(
 def ask(question: str) -> str:
     """Ask the person requesting the design a clarifying question."""
     del question
-    return "No answer available yet; proceed on your best judgement."
+    # Over stdio there is nobody on the other end of this, and telling the model
+    # to use its judgement is how a brief with no data becomes a confident spec.
+    return UNANSWERED
 
 
 @server.resource("peer://protocol")
