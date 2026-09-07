@@ -39,22 +39,54 @@ def _measure(
     )
 
 
-def check_srm(
-    df: pd.DataFrame, *, control: bool | int | str = CONTROL, alpha: float = SRM_ALPHA
+def check_srm(  # noqa: PLR0913 (each argument is one pre-registered choice)
+    df: pd.DataFrame,
+    *,
+    ratio: float = 1.0,
+    control: bool | int | str = CONTROL,
+    alpha: float = SRM_ALPHA,
+    by: tuple[str, ...] = (),
 ) -> SRMResult:
-    """Check whether the traffic split matches the assigned ratio."""
-    result = cast(
-        SampleRatioResult,
-        tt.Experiment({"sample_ratio": tt.SampleRatio()}, variant="arm").analyze(
-            df, control
-        )["sample_ratio"],
-    )
+    """
+    Check the split against the ratio the design actually asked for.
+
+    `ratio` is treatment per unit of control. It used to be pinned at 1, which
+    reported every 90/10 holdout as broken forever.
+
+    `by` re-runs the check inside each level of a column. A split that balances
+    overall while tilting inside a segment is how Simpson's paradox arrives, and
+    the global check is blind to it by construction.
+    """
+    overall = _split_p_value(df, ratio, control)
+    per_stratum = [
+        (f"{column}={level}", _split_p_value(part, ratio, control))
+        for column in by
+        for level, part in df.groupby(column, observed=True)
+        if part.arm.nunique() > 1
+    ]
+    # Bonferroni over the strata: twenty segments each judged at 0.001 is a 2%
+    # chance of condemning a healthy split.
+    stratum_alpha = alpha / max(len(per_stratum), 1)
+    strata = tuple((name, p < stratum_alpha) for name, p in per_stratum)
     return SRMResult(
-        mismatch=result.pvalue < alpha,
-        p_value=result.pvalue,
-        n_control=result.control,
-        n_treatment=result.treatment,
+        mismatch=overall < alpha or any(broken for _, broken in strata),
+        p_value=overall,
+        counts=tuple((str(arm), int(n)) for arm, n in df.arm.value_counts().items()),
+        strata=strata,
     )
+
+
+def _split_p_value(df: pd.DataFrame, ratio: float, control: bool | int | str) -> float:
+    """Bonferroni-adjusted across arms, so a four-arm test isn't three chances to fail."""
+    experiment = tt.Experiment({"sample_ratio": tt.SampleRatio(ratio)}, variant="arm")
+    if df.arm.nunique() <= 2:
+        result = cast(SampleRatioResult, experiment.analyze(df, control)["sample_ratio"])
+        return result.pvalue
+    against_control = experiment.analyze(df, control, all_variants=True)
+    p_values = [
+        cast(SampleRatioResult, r["sample_ratio"]).pvalue for r in against_control.values()
+    ]
+    return min(min(p_values) * len(p_values), 1.0)
 
 
 def analyze(  # noqa: PLR0913 (each argument is one pre-registered choice)

@@ -5,7 +5,11 @@ description: The protocol for reviewing a finished A/B test - validate the split
 
 Never skip steps. Never invent a number you haven't computed with a tool.
 
-1. **Validate first.** Call `check_srm`. If the split is broken, stop:
+1. **Validate first.** Call `check_srm`, passing the pre-registered `ratio`
+   (a 90/10 holdout is a design, not a defect) and `by` for any segment or
+   day column the data has — a split can balance overall while tilting
+   inside a segment, and that is what a composition skew looks like. If the
+   split is broken, stop:
    verdict is INVALID. Do not call `analyze`. State the verdict and *why*
    the split is broken in plain words only. Do not write down a single
    digit — no percentages, counts, ratios, multipliers ("roughly Nx"), or

@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 
 from peer_agent import stats
-from peer_agent.sim import BASELINE, make_case
+from peer_agent.sim import BASELINE, SIMPSON, make_case
 from peer_agent.types import Guardrail, GuardrailStatus
 
 SEEDS = range(200, 240)
@@ -52,6 +52,29 @@ def test_the_primary_test_holds_its_nominal_false_positive_rate():
 
 def test_check_srm_does_not_cry_wolf_on_a_fair_split():
     assert rate(lambda seed: stats.check_srm(null_case(seed)).mismatch) == 0.0
+
+
+def test_a_deliberate_holdout_is_not_a_broken_split():
+    """A 90/10 holdout is a design, not a defect. The old check pinned ratio=1."""
+    rng = np.random.default_rng(0)
+    n = 60_000
+    holdout = pd.DataFrame({"arm": rng.random(n) < 0.10, "converted": rng.random(n) < 0.12})
+
+    assert stats.check_srm(holdout).mismatch  # judged against the wrong ratio
+    assert not stats.check_srm(holdout, ratio=1 / 9).mismatch
+
+
+def test_a_split_can_balance_overall_and_still_be_broken_inside_a_segment():
+    """
+    Differential dropout by arm *within* segment is what SIMPSON plants, and a
+    global count check cannot see it — the arms come out even in aggregate.
+    This is the composition skew, caught directly instead of inferred from a
+    sign flip in scan_segments.
+    """
+    simpson = make_case(n=60_000, lift=0.0, seed=5, flaws=[SIMPSON]).df
+
+    assert not stats.check_srm(simpson).mismatch
+    assert stats.check_srm(simpson, by=("segment",)).mismatch
 
 
 def test_naming_the_control_arm_does_not_change_the_answer():

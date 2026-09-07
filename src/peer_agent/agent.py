@@ -267,7 +267,7 @@ def _spec_defaults(spec: DesignSpec | None) -> dict[str, dict[str, Any]]:
     common = {"control": spec.control_value}
     primary = common | {"alpha": spec.alpha}
     return {
-        "check_srm": common,
+        "check_srm": common | {"ratio": spec.ratio},
         "check_novelty": common,
         "check_guardrails": common | {"guardrails": spec.guardrails},
         "scan_segments": primary,

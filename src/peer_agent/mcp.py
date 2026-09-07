@@ -29,9 +29,9 @@ def _asdict(result: Any) -> Any:
 
 
 @server.tool()
-def check_srm(path: str) -> dict[str, Any]:
-    """Check whether the traffic split matches the assigned ratio."""
-    return _asdict(stats.check_srm(pd.read_parquet(path)))
+def check_srm(path: str, ratio: float = 1.0, by: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Check the split against the ratio the design asked for, overall and by stratum."""
+    return _asdict(stats.check_srm(pd.read_parquet(path), ratio=ratio, by=by))
 
 
 @server.tool()
