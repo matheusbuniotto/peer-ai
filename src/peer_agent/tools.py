@@ -88,12 +88,6 @@ UNANSWERED = (
 
 
 def _make_ask(answerer: Callable[[str], str] | None) -> FunctionType:
-    """
-    The old canned reply told the model to 'proceed on your best judgement',
-    which is the opposite of what asking is for — it taught the model to guess
-    the answer to the question it had just been told to escalate.
-    """
-
     def ask(question: str) -> str:
         """Ask the person requesting the design a clarifying question."""
         return answerer(question) if answerer else UNANSWERED
@@ -102,12 +96,8 @@ def _make_ask(answerer: Callable[[str], str] | None) -> FunctionType:
 
 
 def _make_run_python(sandbox: Any) -> FunctionType:
-    """
-    A real closure (not functools.partial) so it has genuine __name__/__annotations__ —
-    agent.py's _bind() wraps every Tool.fn in one more partial to bind df/case data,
-    and pydantic-ai's schema introspection only ever unwraps a single partial layer.
-    A partial-of-a-partial would break that; a closure-of-a-partial doesn't.
-    """
+    """A closure, not a partial: agent.py binds one more partial and pydantic-ai's
+    schema introspection unwraps only one layer."""
 
     def run_python(df: pd.DataFrame, code: str) -> Any:
         """Run Python analysis code in an isolated container when no built-in tool fits."""

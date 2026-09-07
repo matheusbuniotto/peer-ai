@@ -154,6 +154,7 @@ class GuardrailResult:
 @dataclass(frozen=True)
 class PowerResult:
     n_per_arm: int
+    n_total: int
 
 
 @dataclass(frozen=True)
@@ -163,3 +164,9 @@ class SimulationResult:
     warnings: tuple[str, ...]
     verdict: Verdict
     mean_estimate: float
+    runs: int = 0
+    power_ci: tuple[float, float] = (float("nan"), float("nan"))
+    # The gate belongs on this, not on `power`: at 500 runs a realized 0.78
+    # against a promised 0.80 is Monte Carlo noise, not a miss.
+    shortfall: bool = False
+    bias: float = 0.0
