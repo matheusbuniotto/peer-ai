@@ -83,7 +83,9 @@ def _split_p_value(df: pd.DataFrame, ratio: float, control: bool | int | str) ->
         result = cast(SampleRatioResult, experiment.analyze(df, control)["sample_ratio"])
         return result.pvalue
     against_control = experiment.analyze(df, control, all_variants=True)
-    p_values = [r["sample_ratio"].pvalue for r in against_control.values()]
+    p_values = [
+        cast(SampleRatioResult, r["sample_ratio"]).pvalue for r in against_control.values()
+    ]
     return min(min(p_values) * len(p_values), 1.0)
 
 

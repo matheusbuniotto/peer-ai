@@ -22,7 +22,7 @@ _ANALYZE = AnalyzeResult(
     ci_high=0.00248,
     width=0.13879,
 )
-_SRM = SRMResult(mismatch=False, p_value=0.42, n_control=18432, n_treatment=18291)
+_SRM = SRMResult(mismatch=False, p_value=0.42, counts=(("False", 18432), ("True", 18291)))
 
 
 def answer(text: str) -> Trajectory:
