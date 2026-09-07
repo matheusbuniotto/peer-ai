@@ -1,4 +1,4 @@
-## Abut the project
+## About the project
 **peer-agent** — an AI agent (data scientist) that design and reviews A/B tests the way a skeptical senior data scientist would.
 
 It reviews finished experiments and designs new ones, calling a small toolbox of calibrated statistics — sample ratio mismatch, sequential testing, CUPED, segment scans — and writing its own analysis code in a sandbox when nothing fits. It refuses to report a lift from a broken split, resists inventing a finding when nothing happened, and asks a PM what they'll do if the result comes back flat before it will write a spec.
