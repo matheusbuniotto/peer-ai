@@ -112,7 +112,6 @@ def test_novelty_does_not_fire_on_a_steady_effect():
     assert rate(fires) <= 0.10
 
 
-@pytest.mark.xfail(strict=True, reason="A7: sign flip, not a test — see plan ticket 11")
 def test_a_segment_scan_does_not_invent_a_reversal():
     """Under a true null every segment's sign is a coin flip, not a finding."""
 
@@ -120,6 +119,25 @@ def test_a_segment_scan_does_not_invent_a_reversal():
         return stats.scan_segments(null_case(seed, n=20_000, segments=3)).reversal
 
     assert rate(fires) <= 0.10
+
+
+def test_a_real_reversal_still_registers():
+    """The fix must not have bought its quiet by going blind."""
+    simpson = make_case(n=60_000, lift=0.0, seed=5, flaws=[SIMPSON]).df
+
+    assert stats.scan_segments(simpson).reversal
+
+
+def test_a_composition_skew_is_reported_as_counts_not_as_heterogeneity():
+    """
+    SIMPSON penalises treatment equally in both segments, so one effect really
+    does explain them — Q is right not to fire. What's wrong is the mix, and
+    the per-segment split check is the thing that says so.
+    """
+    result = stats.scan_segments(make_case(n=60_000, lift=0.0, seed=5, flaws=[SIMPSON]).df)
+
+    assert result.heterogeneity_p > 0.05
+    assert all(broken for _, broken in result.composition_srm)
 
 
 def _guardrail_case(treatment_rate: float, n: int = 20_000, seed: int = 0):

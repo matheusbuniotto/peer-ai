@@ -5,6 +5,7 @@ from typing import Literal, cast
 import numpy as np
 import pandas as pd
 import tea_tasting as tt
+from scipy import stats as sps
 from tea_tasting.metrics.mean import MeanResult
 from tea_tasting.metrics.proportion import SampleRatioResult
 
@@ -157,28 +158,53 @@ def sequential(
 def scan_segments(
     df: pd.DataFrame, *, control: bool | int | str = CONTROL, alpha: float = ALPHA
 ) -> SegmentScanResult:
-    """Check each segment for a significant effect or a sign reversal."""
+    """
+    Look for a segment that behaves differently from the whole.
+
+    A reversal now needs the segment's interval to exclude zero on the far side
+    of the overall effect, not merely a differing sign: under a true null every
+    segment's sign is a coin flip, and comparing signs reported a reversal on
+    80% of null datasets. Cochran's Q asks the real question — does one effect
+    explain every segment? — in a single test instead of by eyeballing a scan.
+    """
     if "segment" not in df.columns:
         raise ValueError("scan_segments needs a 'segment' column")
     overall = analyze(df, control=control, alpha=alpha)
-    segments = sorted(df.segment.unique())
-    per_segment = alpha / len(segments)  # Bonferroni over the family, not per-segment FDR
-    winners: list[str] = []
-    reversal = False
-    for segment in segments:
-        subset = df.loc[df.segment == segment]
-        if subset.arm.nunique() < 2:
-            continue
-        result = analyze(subset, control=control, alpha=alpha)
-        if result.p_value < per_segment:
-            winners.append(str(segment))
-        if (
-            np.sign(result.lift)
-            and np.sign(overall.lift)
-            and np.sign(result.lift) != np.sign(overall.lift)
-        ):
-            reversal = True
-    return SegmentScanResult(winners=tuple(winners), reversal=reversal)
+    parts = {
+        str(segment): analyze(subset, control=control, alpha=alpha)
+        for segment, subset in df.groupby("segment", observed=True)
+        if subset.arm.nunique() > 1
+    }
+    per_segment = alpha / max(len(parts), 1)  # Bonferroni over the family
+    return SegmentScanResult(
+        winners=tuple(name for name, r in parts.items() if r.p_value < per_segment),
+        reversal=any(_opposes(r, overall.lift) for r in parts.values()),
+        heterogeneity_p=_cochran_q(list(parts.values()), alpha),
+        composition_srm=check_srm(df, control=control, by=("segment",)).strata,
+    )
+
+
+def _opposes(segment: AnalyzeResult, overall: float) -> bool:
+    """A reversal is a segment whose interval clears zero on the far side."""
+    return (segment.ci_high < 0 < overall) or (overall < 0 < segment.ci_low)
+
+
+def _cochran_q(results: list[AnalyzeResult], alpha: float) -> float:
+    """
+    One effect behind every segment, or several? Q is the inverse-variance
+    weighted spread of the segment effects, read against chi-square on k-1 df.
+    Each segment's standard error is recovered from the interval it reported.
+    """
+    if len(results) < 2:
+        return float("nan")
+    z = sps.norm.ppf(1 - alpha / 2)
+    errors = np.array([(r.ci_high - r.ci_low) / (2 * z) for r in results])
+    if not np.all(np.isfinite(errors)) or np.any(errors <= 0):
+        return float("nan")
+    weights = 1 / errors**2
+    lifts = np.array([r.lift for r in results])
+    q = float(np.sum(weights * (lifts - np.average(lifts, weights=weights)) ** 2))
+    return float(sps.chi2.sf(q, len(results) - 1))
 
 
 def check_novelty(
