@@ -53,6 +53,9 @@ class AnalyzeResult:
     # most that can be said and NO_EFFECT is not available as a verdict.
     equivalent_to_null: bool | None = None
     mde: float | None = None
+    # "row" means independence was assumed rather than enforced.
+    unit_of_analysis: str = "row"
+    rows_per_unit: float = 1.0
 
 
 @pydantic.dataclasses.dataclass(frozen=True)
@@ -71,6 +74,8 @@ class DesignSpec:
     alpha: float = 0.05
     control_value: bool | int | str = False
     covariate: str | None = None
+    # The column holding the randomisation unit, when rows are visits not people.
+    unit_column: str | None = None
     looks: int = 1
     ratio: float = 1.0
     daily_traffic: int | None = None

@@ -35,10 +35,15 @@ def check_srm(path: str, ratio: float = 1.0, by: tuple[str, ...] = ()) -> dict[s
 
 
 @server.tool()
-def analyze(path: str, cuped: bool = False, covariate: str | None = None) -> dict[str, Any]:
+def analyze(
+    path: str,
+    cuped: bool = False,
+    covariate: str | None = None,
+    unit: str | None = None,
+) -> dict[str, Any]:
     """Run the primary conversion-rate test, treatment vs. control."""
     df = pd.read_parquet(path)
-    return _asdict(stats.analyze(df, cuped=cuped, covariate=covariate))
+    return _asdict(stats.analyze(df, cuped=cuped, covariate=covariate, unit=unit))
 
 
 @server.tool()

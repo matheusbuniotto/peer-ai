@@ -85,6 +85,28 @@ def OUTLIERS(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
     return out
 
 
+def REPEATS(
+    df: pd.DataFrame,
+    rng: np.random.Generator,
+    *,
+    returning_share: float = 0.3,
+    max_extra_visits: float = 4,
+) -> pd.DataFrame:
+    """
+    Some users come back, and every visit is logged as its own row. Nothing
+    about the effect changes — the same people, the same arms, the same
+    outcomes — only the row count does.
+
+    Analysed per row, those extra rows read as extra evidence and shrink every
+    p-value. Analysed per user, they say nothing new. This is the most common
+    shape of real experiment data and the one stats.py assumed away.
+    """
+    out = df.assign(user_id=np.arange(len(df)))
+    returning = rng.random(len(df)) < returning_share
+    extra = rng.integers(1, int(max_extra_visits) + 1, size=len(df)) * returning
+    return out.loc[out.index.repeat(1 + extra)].reset_index(drop=True)
+
+
 @dataclass(frozen=True)
 class Case:
     df: pd.DataFrame
