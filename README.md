@@ -58,7 +58,7 @@ peer-agent/
 │   ├── sandbox.py      Containerized code execution environment
 │   ├── tools.py        JSON schemas exposing stats and sandbox to the model
 │   ├── agent.py        The core reasoning and tool loop
-│   ├── mcp.py          Model Context Protocol (MCP) server over stdio
+│   ├── mcp.py          Model Context Protocol (MCP) server over stdio — `peer-mcp`
 │   └── cli.py          CLI commands: review and design
 ├── evals/
 │   ├── suite.yaml      50 benchmark cases with known ground truth
@@ -98,4 +98,40 @@ uv run python -m peer_agent.evals --suite evals/suite.yaml
 ## Design Choices
 
 - Math transparency: `stats.py` relies strictly on `numpy`, `pandas`, and `scipy`. Any data scientist can open the file and verify the equations directly.
-- Model Context Protocol: Includes an MCP server implementation over stdio, allowing `peer-ai` to be plugged into Claude Code, Cursor, or external agent workbenches.
+- Model Context Protocol: Includes an MCP server implementation over stdio (`peer-mcp`), allowing `peer-ai` to be plugged into Claude Code, Codex, Cursor, or other agent harnesses as a pure analytics toolkit — the data connection stays on the host agent's side.
+
+---
+
+## Using it as an MCP server
+
+The same toolbox any MCP client can call, over stdio:
+
+```bash
+uv run peer-mcp                                                     # from a checkout
+uvx --from git+https://github.com/matheusbuniotto/peer-ai peer-mcp  # no checkout needed
+```
+
+Claude Code, from a checkout:
+
+```bash
+claude mcp add peer-agent -- uv run --directory /path/to/peer-ai peer-mcp
+```
+
+Or straight from the repo, no clone:
+
+```json
+{
+  "peer-agent": {
+    "command": "uvx",
+    "args": ["--from", "git+https://github.com/matheusbuniotto/peer-ai", "peer-mcp"]
+  }
+}
+```
+
+Every tool takes either a `path` (parquet, csv, or json, read by suffix) or
+`data` — a JSON-rows string, for a host that already has the data in hand
+(e.g. a result set from a different MCP server, like a Databricks query tool)
+and nothing local to write a file to. Exactly one is expected. The
+review-protocol checklist is published as the `peer://protocol` resource, so a
+client that reads resources gets the "validate first" rules along with the
+tools.
