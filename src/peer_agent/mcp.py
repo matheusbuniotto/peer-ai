@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import dataclasses
+import json
 import sys
 from importlib import resources
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -28,55 +30,90 @@ def _asdict(result: Any) -> Any:
     return result
 
 
+_READERS = {".parquet": pd.read_parquet, ".csv": pd.read_csv, ".json": pd.read_json}
+
+
+def _load_df(path: str | None = None, data: str | None = None) -> pd.DataFrame:
+    """
+    A local `path` (parquet/csv/json, by suffix), or `data` — JSON rows another
+    tool already handed the caller, with no shared filesystem to stage a file on.
+    Exactly one is expected.
+    """
+    if path is not None and data is not None:
+        raise ValueError("give exactly one of `path` or `data`")
+    if data is not None:
+        return pd.DataFrame(json.loads(data))
+    if path is None:
+        raise ValueError("give exactly one of `path` or `data`")
+    suffix = Path(path).suffix
+    try:
+        reader = _READERS[suffix]
+    except KeyError:
+        raise ValueError(f"unsupported file type: {suffix or path!r}") from None
+    return reader(path)
+
+
 @server.tool()
-def check_srm(path: str, ratio: float = 1.0, by: tuple[str, ...] = ()) -> dict[str, Any]:
+def check_srm(
+    path: str | None = None,
+    data: str | None = None,
+    ratio: float = 1.0,
+    by: tuple[str, ...] = (),
+) -> dict[str, Any]:
     """Check the split against the ratio the design asked for, overall and by stratum."""
-    return _asdict(stats.check_srm(pd.read_parquet(path), ratio=ratio, by=by))
+    return _asdict(stats.check_srm(_load_df(path, data), ratio=ratio, by=by))
 
 
 @server.tool()
 def analyze(
-    path: str,
+    path: str | None = None,
+    data: str | None = None,
     cuped: bool = False,
     covariate: str | None = None,
     unit: str | None = None,
 ) -> dict[str, Any]:
     """Run the primary conversion-rate test, treatment vs. control."""
-    df = pd.read_parquet(path)
+    df = _load_df(path, data)
     return _asdict(stats.analyze(df, cuped=cuped, covariate=covariate, unit=unit))
 
 
 @server.tool()
-def sequential(path: str, looks: int) -> dict[str, Any]:
+def sequential(
+    path: str | None = None, data: str | None = None, *, looks: int
+) -> dict[str, Any]:
     """Bonferroni-corrected look: conservative, transparent, easy to defend."""
-    return _asdict(stats.sequential(pd.read_parquet(path), looks))
+    return _asdict(stats.sequential(_load_df(path, data), looks))
 
 
 @server.tool()
-def scan_segments(path: str) -> dict[str, Any]:
+def scan_segments(path: str | None = None, data: str | None = None) -> dict[str, Any]:
     """Check each segment for a significant effect or a sign reversal."""
-    return _asdict(stats.scan_segments(pd.read_parquet(path)))
+    return _asdict(stats.scan_segments(_load_df(path, data)))
 
 
 @server.tool()
-def check_novelty(path: str) -> dict[str, Any]:
+def check_novelty(path: str | None = None, data: str | None = None) -> dict[str, Any]:
     """Check whether an early effect is decaying over time."""
-    return _asdict(stats.check_novelty(pd.read_parquet(path)))
+    return _asdict(stats.check_novelty(_load_df(path, data)))
 
 
 @server.tool()
 def check_guardrails(
-    path: str, guardrails: tuple[Guardrail | str, ...] = ()
+    path: str | None = None,
+    data: str | None = None,
+    guardrails: tuple[Guardrail | str, ...] = (),
 ) -> dict[str, Any]:
     """Check whether any guardrail could still be moving past its margin."""
-    return _asdict(stats.check_guardrails(pd.read_parquet(path), guardrails))
+    return _asdict(stats.check_guardrails(_load_df(path, data), guardrails))
 
 
 @server.tool()
-def run_python(path: str, code: str) -> dict[str, Any]:
+def run_python(
+    path: str | None = None, data: str | None = None, *, code: str
+) -> dict[str, Any]:
     """Run Python analysis code in an isolated container when no built-in tool fits."""
     with Sandbox() as sandbox:
-        result = sandbox.run(code, pd.read_parquet(path))
+        result = sandbox.run(code, _load_df(path, data))
     return _asdict(result)
 
 
@@ -141,5 +178,10 @@ def stdio_roundtrip(method: str, **kwargs: Any) -> Any:
     return asyncio.run(_roundtrip(method, **kwargs))
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for the `peer-mcp` script. Speaks stdio."""
     server.run()
+
+
+if __name__ == "__main__":
+    main()

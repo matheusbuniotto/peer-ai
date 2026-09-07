@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 
+import pandas as pd
 import pytest
 from conftest import names
 
@@ -194,6 +195,35 @@ def test_the_protocol_is_published_as_a_resource():
 
     text = stdio_roundtrip("resources/read", uri="peer://protocol")
     assert "validate" in text.lower()
+
+
+def test_a_tool_takes_a_path_or_inline_rows_but_needs_exactly_one(srm):
+    """A caller with no shared filesystem — another MCP server's JSON reply in
+    hand, nowhere local to stage it — passes `data` instead of `path`."""
+    from peer_agent.mcp import _load_df
+
+    by_path = _load_df(path=srm.path)
+    by_data = _load_df(data=srm.df.to_json(orient="records"))
+    pd.testing.assert_frame_equal(by_path.reset_index(drop=True), by_data)
+
+    for kwargs in ({}, {"path": srm.path, "data": "[]"}):
+        with pytest.raises(ValueError, match="exactly one"):
+            _load_df(**kwargs)
+
+
+@pytest.mark.docker
+def test_the_server_accepts_rows_handed_over_from_another_mcp_server(srm):
+    """The Databricks-in-Claude case: a query tool already returned JSON rows,
+    and check_srm has to work from those directly, not a file the client wrote."""
+    from peer_agent import stats
+    from peer_agent.mcp import stdio_roundtrip
+
+    reply = stdio_roundtrip(
+        "tools/call",
+        name="check_srm",
+        arguments={"data": srm.df.to_json(orient="records")},
+    )
+    assert reply["mismatch"] == stats.check_srm(srm.df).mismatch
 
 
 # --------------------------------------------------------------------------- #

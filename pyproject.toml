@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 peer = "peer_agent.cli:main"
+peer-mcp = "peer_agent.mcp:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3", "prek>=0.5.2", "ty>=0.0.78"]
