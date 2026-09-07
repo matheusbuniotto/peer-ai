@@ -110,8 +110,12 @@ class SegmentScanResult:
 @dataclass(frozen=True)
 class NoveltyResult:
     decaying: bool
-    early_lift: float
-    late_lift: float
+    slope: float  # change in lift per day
+    slope_ci: tuple[float, float]
+    daily_lifts: tuple[tuple[int, float], ...] = ()
+    # False when only a calendar day was available. Novelty decays on days since
+    # first exposure, and the two answer different questions.
+    cohort_day: bool = False
 
 
 class GuardrailStatus(StrEnum):

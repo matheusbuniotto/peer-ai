@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 
 from peer_agent import stats
-from peer_agent.sim import BASELINE, SIMPSON, make_case
+from peer_agent.sim import BASELINE, NOVELTY, SIMPSON, make_case
 from peer_agent.types import Guardrail, GuardrailStatus
 
 SEEDS = range(200, 240)
@@ -101,7 +101,6 @@ def test_duplicating_every_row_must_not_shrink_the_p_value():
     assert stats.analyze(doubled).p_value >= stats.analyze(df).p_value
 
 
-@pytest.mark.xfail(strict=True, reason="A4: threshold, not a test — see plan ticket 09")
 def test_novelty_does_not_fire_on_a_steady_effect():
     """A lift that never decays must not be reported as decaying."""
 
@@ -110,6 +109,26 @@ def test_novelty_does_not_fire_on_a_steady_effect():
         return stats.check_novelty(steady).decaying
 
     assert rate(fires) <= 0.10
+
+
+def test_a_real_decay_is_still_caught_every_time():
+    """Quiet on nulls is only worth having if it stays loud on the real thing."""
+
+    def fires(seed: int) -> bool:
+        fading = make_case(n=60_000, seed=seed, days=14, flaws=[NOVELTY]).df
+        return stats.check_novelty(fading).decaying
+
+    assert rate(fires, range(1, 11)) == 1.0
+
+
+def test_the_decay_verdict_carries_its_own_uncertainty():
+    """A slope with no interval around it is the old magic threshold again."""
+    result = stats.check_novelty(make_case(n=60_000, seed=1, days=14, flaws=[NOVELTY]).df)
+    low, high = result.slope_ci
+
+    assert low < result.slope < high < 0
+    assert len(result.daily_lifts) > 3
+    assert result.cohort_day is False  # only a calendar day was available
 
 
 def test_a_segment_scan_does_not_invent_a_reversal():
