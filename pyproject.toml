@@ -14,10 +14,12 @@ dependencies = [
     "scipy>=1.14",
     "pydantic-ai-harness[skills]>=0.29.0",
     "pyyaml>=6.0",
+    "mcp>=2.1",
 ]
 
 [project.scripts]
 peer = "peer_agent.cli:main"
+peer-mcp = "peer_agent.mcp:main"
 
 [dependency-groups]
 dev = ["pytest>=8.3", "prek>=0.5.2", "ty>=0.0.78"]

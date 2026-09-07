@@ -14,6 +14,7 @@ turned into.
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Callable, Sequence
 
 import numpy as np
@@ -21,8 +22,9 @@ import pandas as pd
 import pytest
 
 from peer_agent import stats
+from peer_agent.design import power_analysis, simulate_design
 from peer_agent.sim import BASELINE, NOVELTY, REPEATS, SIMPSON, make_case
-from peer_agent.types import Guardrail, GuardrailStatus
+from peer_agent.types import BY_USER, DesignSpec, Guardrail, GuardrailStatus
 
 SEEDS = range(200, 240)
 
@@ -264,3 +266,50 @@ def test_a_flat_result_is_only_a_null_when_the_mde_is_excluded():
     assert stats.analyze(df).equivalent_to_null is None
     assert stats.analyze(df, mde=0.20).equivalent_to_null is True
     assert stats.analyze(df, mde=0.01).equivalent_to_null is False
+
+
+# --------------------------------------------------------------------------- #
+# A design gate reads the interval, not the point estimate
+# --------------------------------------------------------------------------- #
+
+
+_SOLVED_SPEC = DesignSpec(
+    baseline=BASELINE,
+    mde=0.08,
+    power=0.80,
+    days=14,
+    n_per_arm=power_analysis(BASELINE, 0.08).n_per_arm,
+    unit=BY_USER,
+    metric="purchase_rate",
+    guardrails=(Guardrail("latency_p95", direction="up_is_bad"),),
+    if_flat="keep the current flow",
+)
+
+
+def _spec(**overrides) -> DesignSpec:
+    return dataclasses.replace(_SOLVED_SPEC, **overrides)
+
+
+@pytest.mark.slow
+def test_a_design_sized_by_the_solver_delivers_the_power_it_promised():
+    """power_analysis and simulate_design have to agree, or one of them is lying."""
+    result = simulate_design(_spec(), lift=0.08, runs=500, seed=0)
+
+    assert result.power_ci[0] <= 0.80 <= result.power_ci[1]
+    assert not result.shortfall
+    assert abs(result.bias) < 0.02
+
+
+@pytest.mark.slow
+def test_a_real_shortfall_is_flagged_and_monte_carlo_noise_is_not():
+    starved = simulate_design(_spec(n_per_arm=2_000), lift=0.08, runs=500, seed=1)
+
+    assert starved.shortfall
+    assert starved.power_ci[1] < starved.promised
+
+
+def test_traffic_that_cannot_fill_the_design_is_a_warning():
+    spec = _spec(days=14, daily_traffic=500)
+    warnings = " ".join(simulate_design(spec, lift=0.08, runs=20, seed=2).warnings)
+
+    assert "days, not 14" in warnings

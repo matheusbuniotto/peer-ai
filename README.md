@@ -54,12 +54,13 @@ peer-agent/
 │   ├── types.py        Verdict, DesignSpec, frozen dataclasses
 │   ├── sim.py          make_case() with planted flaws (SRM, Simpson, peeking)
 │   ├── stats.py        SRM checks, sequential testing, CUPED, segment scans
-│   ├── design.py       Power analysis and Monte Carlo design simulation
+│   ├── design.py       Power analysis (tea-tasting's Mean.solve_power) and
+│   │                   Monte Carlo design simulation (Experiment.simulate)
 │   ├── sandbox.py      Containerized code execution environment
 │   ├── tools.py        JSON schemas exposing stats and sandbox to the model
 │   ├── agent.py        The core reasoning and tool loop
-│   ├── mcp.py          Model Context Protocol (MCP) server over stdio
-│   └── cli.py          CLI commands: review and design
+│   ├── mcp.py          MCP server over stdio — `peer mcp` / `peer-mcp`
+│   └── cli.py          CLI commands: review, design, and mcp
 ├── evals/
 │   ├── suite.yaml      50 benchmark cases with known ground truth
 │   └── baseline.json   Committed scores used as CI merge gate
@@ -98,4 +99,32 @@ uv run python -m peer_agent.evals --suite evals/suite.yaml
 ## Design Choices
 
 - Math transparency: `stats.py` relies strictly on `numpy`, `pandas`, and `scipy`. Any data scientist can open the file and verify the equations directly.
-- Model Context Protocol: Includes an MCP server implementation over stdio, allowing `peer-ai` to be plugged into Claude Code, Cursor, or external agent workbenches.
+- Model Context Protocol: Includes an MCP server implementation over stdio (`peer mcp` / `peer-mcp`), allowing `peer-ai` to be plugged into Claude Code, Cursor, or external agent workbenches.
+
+---
+
+## Using it as an MCP server
+
+The same toolbox any MCP client can call, over stdio:
+
+```bash
+uv run peer mcp          # from a checkout
+uvx --from peerai peer-mcp   # from a wheel, nothing to install
+```
+
+Claude Code:
+
+```bash
+claude mcp add peer-agent -- uv run --directory /path/to/peerai peer mcp
+```
+
+Or in an `mcpServers` config block:
+
+```json
+{ "peer-agent": { "command": "uvx", "args": ["--from", "peerai", "peer-mcp"] } }
+```
+
+Tools take a `path` to a parquet file and load it themselves. The
+review-protocol checklist is published as the `peer://protocol` resource, so a
+client that reads resources gets the "validate first" rules along with the
+tools.

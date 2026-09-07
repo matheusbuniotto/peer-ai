@@ -109,6 +109,14 @@ def _web(args: argparse.Namespace) -> int:
     return 0
 
 
+def _mcp(args: argparse.Namespace) -> int:
+    del args
+    from peer_agent.mcp import main as serve
+
+    serve()
+    return 0
+
+
 def _eval(args: argparse.Namespace) -> int:
     from peer_agent.evals import check_regression, load_suite, run_suite
 
@@ -166,6 +174,9 @@ def main(argv: list[str] | None = None) -> int:
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8000)
     web.set_defaults(fn=_web)
+
+    mcp = sub.add_parser("mcp", help="Serve the toolbox to an MCP client over stdio.")
+    mcp.set_defaults(fn=_mcp)
 
     eval_p = sub.add_parser(
         "eval", help="Run the eval suite and print an accuracy summary."
