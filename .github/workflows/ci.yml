@@ -16,7 +16,7 @@ jobs:
       # ty is not clean on this repo yet. The gate is that a diff must not make it
       # worse, so this ceiling only ever moves down. Raising it needs a reason in
       # the PR body — it's the one line a reviewer should argue with.
-      TY_MAX_DIAGNOSTICS: 24
+      TY_MAX_DIAGNOSTICS: 15
 
     steps:
       - uses: actions/checkout@v4

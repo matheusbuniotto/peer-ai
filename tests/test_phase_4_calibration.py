@@ -21,6 +21,7 @@ import pytest
 
 from peer_agent import stats
 from peer_agent.sim import BASELINE, make_case
+from peer_agent.types import Guardrail, GuardrailStatus
 
 SEEDS = range(200, 240)
 
@@ -98,24 +99,78 @@ def test_a_segment_scan_does_not_invent_a_reversal():
     assert rate(fires) <= 0.10
 
 
-@pytest.mark.xfail(strict=True, reason="A1: fails open — see plan ticket 04")
-def test_a_guardrail_too_wide_to_clear_is_not_reported_clean():
+def _guardrail_case(treatment_rate: float, n: int = 20_000, seed: int = 0):
     """
-    The worked example from the plan: revenue down ~7%, interval reaching -13%,
-    two-sided p=0.058. A superiority test calls that clean and ships it. The
-    question a guardrail asks is whether harm past the margin can be ruled out,
-    and here it plainly can't.
-
-    Ticket 04 replaces `.breached` with a three-state status; this assertion
-    gets rewritten there to expect INCONCLUSIVE rather than CLEAN.
+    A frame whose `revenue` guardrail moves from 0.120 to `treatment_rate`.
+    The draw order matters — revenue takes the second stream, which is what
+    makes seed 0 the worked example from the plan.
     """
-    rng = np.random.default_rng(0)
-    arm = rng.random(20_000) < 0.5
-    df = pd.DataFrame(
+    rng = np.random.default_rng(seed)
+    arm = rng.random(n) < 0.5
+    revenue = rng.random(n) < np.where(arm, treatment_rate, 0.120)
+    return pd.DataFrame(
         {
             "arm": arm,
-            "converted": rng.random(20_000) < BASELINE,
-            "revenue": (rng.random(20_000) < np.where(arm, 0.118, 0.120)).astype(float),
+            "converted": np.random.default_rng(seed + 1).random(n) < BASELINE,
+            "revenue": revenue.astype(float),
         }
     )
-    assert stats.check_guardrails(df, ("revenue",)).breached
+
+
+def test_a_guardrail_too_wide_to_clear_is_not_reported_clean():
+    """
+    The worked example: revenue down ~7%, one-sided bound reaching past -12%,
+    two-sided p=0.058. A superiority test can't reject at 0.01, calls it clean
+    and ships the regression. Non-inferiority asks whether harm past the 3%
+    margin is ruled out, and here it plainly isn't.
+    """
+    result = stats.check_guardrails(_guardrail_case(0.118), ("revenue",))
+
+    assert dict(result.statuses)["revenue"] is GuardrailStatus.INCONCLUSIVE
+    assert result.blocks_ship
+    assert dict(result.bounds)["revenue"] < -0.03
+
+
+def test_an_unmeasured_guardrail_does_not_pass_by_default():
+    """Naming a guardrail with no column behind it used to read as clean."""
+    result = stats.check_guardrails(_guardrail_case(0.120), ("latency_p95",))
+
+    assert dict(result.statuses)["latency_p95"] is GuardrailStatus.INCONCLUSIVE
+    assert result.blocks_ship
+
+
+def test_a_guardrail_that_really_is_flat_clears():
+    """Scepticism that blocks everything is as useless as none at all."""
+    result = stats.check_guardrails(
+        _guardrail_case(0.120, n=400_000), (Guardrail("revenue", margin=0.05),)
+    )
+
+    assert dict(result.statuses)["revenue"] is GuardrailStatus.CLEAN
+    assert not result.blocks_ship
+
+
+def test_a_real_regression_past_the_margin_breaches():
+    result = stats.check_guardrails(
+        _guardrail_case(0.090, n=200_000), (Guardrail("revenue", margin=0.05),)
+    )
+
+    assert dict(result.statuses)["revenue"] is GuardrailStatus.BREACHED
+    assert result.blocks_ship
+
+
+# --------------------------------------------------------------------------- #
+# A null is not the same as not enough data
+# --------------------------------------------------------------------------- #
+
+
+def test_a_flat_result_is_only_a_null_when_the_mde_is_excluded():
+    """
+    Same data, same p-value, two different answers. Without an MDE all you can
+    say is "not significant"; with one you can say whether the experiment was
+    big enough for that to mean anything.
+    """
+    df = null_case(3, n=60_000)
+
+    assert stats.analyze(df).equivalent_to_null is None
+    assert stats.analyze(df, mde=0.20).equivalent_to_null is True
+    assert stats.analyze(df, mde=0.01).equivalent_to_null is False
