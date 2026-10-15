@@ -7,9 +7,9 @@ No active decisions yet. The baseline split in `live-luna-run` becomes AD-001 if
 ## Handoff
 
 **Feature**: live-luna-run
-**Where**: plan.md written, not approved. No checks, no code.
-**In progress**: `.specs/features/live-luna-run/plan.md`
-**Next step**: human review of Flow, Impact, and the baseline door
-**Blockers**: Local `.env` has `LLM_API_KEY` set. Actions secrets `LLM_API_KEY` and `LLM_BASE_URL` exist on `matheusbuniotto/peer-ai`. The plan is not approved. A dispatch still needs the promoted baseline on the ref Actions checks out, which needs an explicit push.
-**Uncommitted**: `.specs/STATE.md`, `.specs/features/live-luna-run/plan.md`
+**Where**: C1-C8, C10-C11, and C13-C16 committed at `b27ee03`. The live run's `errors.md` is written. C12 is red on two pre-existing tests. C9 is not dispatched.
+**In progress**: none
+**Next step**: decide the `pass^3` assertion and the one-turn first trajectory, then prek, push `ft-eval-honesty`, dispatch `live-eval.yml`, then the Verifier
+**Blockers**: `test_readme_table_is_fresh` forbids the trials-3 column name. `test_the_page_can_replay_a_trajectory` needs two turns on the first replayed case. C9 needs the promoted baseline on the ref Actions checks out.
+**Uncommitted**: none after the error-report commit
 **Branch**: ft-eval-honesty

@@ -94,3 +94,7 @@ Proof: `uv run pytest tests/test_live_luna.py -k test_sample_parquet_has_a_segme
 ## Handoff
 
 - S1 = 15k, all in the eval command and the committed score; S2 enters the baseline at 23k; S3 enters the shell script at 24k; S4 enters the demo at 38k. `wc -c` on the files these slices touch is 133582 bytes, about 33k tokens, under the 150k budget. One builder.
+
+- **Boundary:** C1–C8, C10–C11, and C13–C16 are proved at `b27ee03`. The live run's `errors.md` is written after that commit. C12 is red: the README script's nested pytest fails `test_readme_table_is_fresh` because the trials-3 header is `pass^3`, and `test_the_page_can_replay_a_trajectory` because the first replayed trajectory is one turn. C9 is not dispatched.
+- **Settled mid-build:** The local `.env` and the Actions secrets were in place before the run. `uv run --env-file .env` loaded the key. A blank `PEER_LOG_PATH` was treated as the default log path, because an empty value made every review raise `IsADirectoryError` and discard the model's answer. The live command used `--concurrency 8`.
+- **Abandoned:** The first live attempt exited 1 and left `fixtures/recorded.jsonl` untouched. Its results directory was deleted and `results/LATEST` was restored before the successful run.
