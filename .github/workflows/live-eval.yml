@@ -1,0 +1,49 @@
+name: live-eval
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model name passed to peer eval --model
+        required: false
+        default: muse-spark-1.2-contributor
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: live gate
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          MODEL: ${{ github.event.inputs.model || 'muse-spark-1.2-contributor' }}
+        run: |
+          if [ -z "$LLM_API_KEY" ] || [ -z "$LLM_BASE_URL" ]; then
+            echo "::warning::LLM_API_KEY or LLM_BASE_URL is unset; skipping the live gate."
+            exit 0
+          fi
+          uv run peer eval --model "$MODEL" --trials 3 --gate live --out results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-results
+          path: results/**/results.json
+          if-no-files-found: ignore
+
+  calibration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: slow statistical calibrations
+        run: uv run pytest -m "slow and not live and not docker" -q

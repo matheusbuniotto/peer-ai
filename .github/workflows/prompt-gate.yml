@@ -1,0 +1,28 @@
+name: prompt-gate
+
+on:
+  pull_request:
+    paths:
+      - src/peer_agent/prompt.md
+      - src/peer_agent/skills/**
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - name: one live trial when a key is present
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+        run: |
+          if [ -z "$LLM_API_KEY" ] || [ -z "$LLM_BASE_URL" ]; then
+            echo "::warning::No LLM secret on this PR. The prompt gate does not block."
+            exit 0
+          fi
+          uv run peer eval --model "${LLM_MODEL:-muse-spark-1.2-contributor}" --trials 1 --gate live --out results
