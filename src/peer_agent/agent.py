@@ -70,6 +70,18 @@ class OverBudget(Exception):
     pass
 
 
+def chat_settings(base_url: str) -> OpenAIChatModelSettings:
+    """Leave OpenAI's `store` field off the request when the host is OpenRouter.
+
+    OpenRouter returns 400 for parameters the model page does not list. Other
+    compatible endpoints 500 when conversation storage stays at its default, so
+    those keep `store` off.
+    """
+    if "openrouter.ai" in base_url:
+        return OpenAIChatModelSettings()
+    return OpenAIChatModelSettings(openai_store=False)
+
+
 _logfire_configured = False
 _LOG_LOCK = threading.Lock()
 
@@ -358,14 +370,10 @@ class Agent:
         missing = [name for name in required if not os.environ.get(name)]
         if missing:
             raise RuntimeError(f"{', '.join(missing)} not set — see .env.example")
-        provider = OpenAIProvider(
-            base_url=os.environ["LLM_BASE_URL"],
-            api_key=os.environ["LLM_API_KEY"],
-        )
-        # This endpoint 500s if a conversation-storage request is left at its default.
-        settings = OpenAIChatModelSettings(openai_store=False)
+        base_url = os.environ["LLM_BASE_URL"]
+        provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
         model = OpenAIChatModel(
-            os.environ["LLM_MODEL"], provider=provider, settings=settings
+            os.environ["LLM_MODEL"], provider=provider, settings=chat_settings(base_url)
         )
         return cls(model, tools=analysis_tools(Sandbox()))
 

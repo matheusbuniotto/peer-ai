@@ -8,7 +8,7 @@ on:
       model:
         description: Model name passed to peer eval --model
         required: false
-        default: muse-spark-1.2-contributor
+        default: openai/gpt-6-luna
 
 jobs:
   live:
@@ -23,7 +23,7 @@ jobs:
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
-          MODEL: ${{ github.event.inputs.model || 'muse-spark-1.2-contributor' }}
+          MODEL: ${{ github.event.inputs.model || 'openai/gpt-6-luna' }}
         run: |
           if [ -z "$LLM_API_KEY" ] || [ -z "$LLM_BASE_URL" ]; then
             echo "::warning::LLM_API_KEY or LLM_BASE_URL is unset; skipping the live gate."

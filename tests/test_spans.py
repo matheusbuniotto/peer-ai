@@ -20,11 +20,7 @@ def test_the_case_span_carries_usage_and_the_score(capfire):
         return FakeLLM(["VERDICT: NO_EFFECT. Flat."])
 
     run_suite(suite, model="fake", llm_for=llm_for, variants=("no-tools",))
-    spans = [
-        span
-        for span in capfire.exporter.exported_spans
-        if span.name == "eval.case"
-    ]
+    spans = [span for span in capfire.exporter.exported_spans if span.name == "eval.case"]
     assert spans
     attributes = dict(spans[-1].attributes or {})
     assert attributes["peer.correct"] is True

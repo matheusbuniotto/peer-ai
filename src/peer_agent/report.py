@@ -35,7 +35,9 @@ def render_table(payload: dict[str, Any], *, source: str | None = None) -> str:
     if source:
         lines.append(f"Source: [`{source}`]({source}).")
         lines.append("")
-    primary = next((v for v in payload["variants"] if v.get("tools")), payload["variants"][0])  # noqa: E501
+    primary = next(
+        (v for v in payload["variants"] if v.get("tools")), payload["variants"][0]
+    )  # noqa: E501
     lines.append(
         f"Model `{primary['model']}`, run `{payload['run_id']}`, "
         f"{payload['generated_at'][:10]}, git `{payload['git_sha']}`."

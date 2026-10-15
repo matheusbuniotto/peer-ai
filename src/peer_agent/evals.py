@@ -25,12 +25,12 @@ import logfire
 import numpy as np
 import pandas as pd
 import yaml
-from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
-from peer_agent.agent import Agent, Trajectory, json_default
+from peer_agent.agent import Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
     mcnemar,
@@ -125,11 +125,9 @@ def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], list[Any]]:
 
 
 def _live_model(model: str) -> OpenAIChatModel:
-    provider = OpenAIProvider(
-        base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"]
-    )
-    settings = OpenAIChatModelSettings(openai_store=False)
-    return OpenAIChatModel(model, provider=provider, settings=settings)
+    base_url = os.environ["LLM_BASE_URL"]
+    provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+    return OpenAIChatModel(model, provider=provider, settings=chat_settings(base_url))
 
 
 def _review_question(case: Case) -> str:

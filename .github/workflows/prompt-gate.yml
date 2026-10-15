@@ -25,4 +25,4 @@ jobs:
             echo "::warning::No LLM secret on this PR. The prompt gate does not block."
             exit 0
           fi
-          uv run peer eval --model "${LLM_MODEL:-muse-spark-1.2-contributor}" --trials 1 --gate live --out results
+          uv run peer eval --model "${LLM_MODEL:-openai/gpt-6-luna}" --trials 1 --gate live --out results

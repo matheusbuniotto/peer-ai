@@ -11,7 +11,7 @@ uv run peer demo
 uv run pytest -m "not live and not docker and not slow"
 ```
 
-A live review needs `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` (see `.env.example`).
+A live review needs `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` (see `.env.example`). The example endpoint is OpenRouter and the example model is `openai/gpt-6-luna`.
 
 ```bash
 uv run peer review fixtures/sample.parquet  # needs LLM_API_KEY
@@ -93,7 +93,7 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export spans over OTLP/HTTP in addition to 
 
 The numbers in the table are a harness replay of `fixtures/recorded.jsonl`. They are not a live model score. This environment had no `LLM_API_KEY`, so no `mode: "live"` run is committed. The model name on the fixture (`claude-opus-5`) is the label that was recorded with the turns. It is not evidence that this model was called.
 
-Replay rows have null tokens and a null cost. Latency is the time to replay the recorded turns and run the tools. `evals/pricing.yaml` is an empty card on purpose: a model without a price is `cost_usd: null`, never zero.
+Replay rows have null tokens and a null cost. Latency is the time to replay the recorded turns and run the tools. `evals/pricing.yaml` prices `openai/gpt-6-luna` at OpenRouter's list rate on 2026-10-15: $0.10 in and $0.50 out per million tokens. A model that is not on that card gets `cost_usd: null`, never zero.
 
 The replay gate cannot see a prompt change, because the recorded answers do not change when the prompt does. That is the live gate's job.
 
