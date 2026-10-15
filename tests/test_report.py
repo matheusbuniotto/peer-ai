@@ -18,7 +18,10 @@ def test_readme_table_is_fresh():
     path, payload = _committed()
     block = render_table(payload, source=str(path))
     assert block in Path("README.md").read_text()
-    assert "pass^3" not in block
+    k = int(payload["trials"])
+    assert f"pass^{k}" in block
+    if k != 3:
+        assert "pass^3" not in block
 
 
 def test_error_report_matches_the_replay_and_adds_up():
