@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "peer-ai eval results",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "git_sha",
+    "suite_sha256",
+    "prompt_sha256",
+    "mode",
+    "trials",
+    "generated_at",
+    "accuracy",
+    "accuracy_ci",
+    "false_ships",
+    "false_blocks",
+    "by_flaw",
+    "models",
+    "variants",
+    "comparisons",
+    "cases",
+    "published_failures"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "run_id": {"type": "string", "minLength": 1},
+    "git_sha": {"type": "string"},
+    "suite_sha256": {"type": "string"},
+    "prompt_sha256": {"type": "string"},
+    "mode": {"enum": ["live", "replay"]},
+    "trials": {"type": "integer", "minimum": 1},
+    "temperature": {"type": ["number", "null"]},
+    "generated_at": {"type": "string"},
+    "accuracy": {"type": "number"},
+    "accuracy_ci": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {"type": "number"}
+    },
+    "false_ships": {"type": "number"},
+    "false_blocks": {"type": "number"},
+    "by_flaw": {"type": "object", "additionalProperties": {"type": "number"}},
+    "models": {"type": "array"},
+    "variants": {"type": "array", "items": {"$ref": "#/$defs/variant"}},
+    "comparisons": {"type": "array", "items": {"$ref": "#/$defs/comparison"}},
+    "cases": {"type": "array", "items": {"$ref": "#/$defs/case"}},
+    "published_failures": {"type": "array"}
+  },
+  "$defs": {
+    "variant": {
+      "type": "object",
+      "required": [
+        "label", "model", "tools", "accuracy", "accuracy_ci", "accuracy_by_trial",
+        "pass_at_k", "pass_hat_k", "false_ships", "false_blocks", "by_flaw",
+        "errors", "process", "cost_usd", "latency_s", "tokens"
+      ],
+      "properties": {
+        "label": {"type": "string"},
+        "model": {"type": "string"},
+        "tools": {"type": "boolean"},
+        "accuracy": {"type": "number"},
+        "accuracy_ci": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "number"}},
+        "accuracy_by_trial": {"type": "array", "items": {"type": "number"}},
+        "pass_at_k": {"type": "number"},
+        "pass_hat_k": {"type": "number"},
+        "false_ships": {"type": "number"},
+        "false_blocks": {"type": "number"},
+        "by_flaw": {"type": "object"},
+        "errors": {"type": "object"},
+        "process": {"type": "object"},
+        "cost_usd": {"type": "object"},
+        "latency_s": {"type": "object"},
+        "tokens": {"type": "object"}
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "required": ["a", "b", "b_only_a_right", "c_only_b_right", "p_value", "method"],
+      "properties": {
+        "a": {"type": "string"},
+        "b": {"type": "string"},
+        "b_only_a_right": {"type": "integer"},
+        "c_only_b_right": {"type": "integer"},
+        "p_value": {"type": "number"},
+        "method": {"enum": ["exact", "chi2_cc"]}
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": [
+        "id", "flaw", "truth", "variant", "trial", "verdict", "correct", "error",
+        "srm_checked_before_lift", "latency_s", "input_tokens", "output_tokens",
+        "cost_usd", "trajectory"
+      ],
+      "properties": {
+        "id": {"type": "string"},
+        "flaw": {"type": "string"},
+        "truth": {"type": "string"},
+        "variant": {"type": "string"},
+        "model": {"type": "string"},
+        "trial": {"type": "integer"},
+        "verdict": {"type": ["string", "null"]},
+        "correct": {"type": "boolean"},
+        "error": {"type": ["string", "null"]},
+        "srm_checked_before_lift": {"type": "boolean"},
+        "latency_s": {"type": "number"},
+        "input_tokens": {"type": ["integer", "null"]},
+        "output_tokens": {"type": ["integer", "null"]},
+        "cost_usd": {"type": ["number", "null"]},
+        "trajectory": {"type": "array"}
+      }
+    }
+  }
+}

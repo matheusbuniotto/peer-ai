@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 import tempfile
 from collections.abc import Callable
@@ -62,14 +63,45 @@ def SIMPSON(
 
 
 def PEEKING(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
-    """
-    Peeking isn't a property of the data, it's a property of how it's read:
-    checked every day, stopped the moment it looks good. by_day() creates
-    the repeated looks; this flaw is a named pass-through so a peeking case
-    can be built and labelled like any other.
+    """Stop at the first day d >= 3 whose cumulative test has p < 0.05.
+
+    The rows are generated under the true lift (the suite uses 0). Truncating
+    at an opportunistic look makes the final p-value an optional-stopping
+    artifact, so the case's truth is INVALID. `make_case` walks seeds until
+    this happens and records the seed that worked on `df.attrs`.
     """
     del rng
+    if "day" not in df.columns:
+        raise ValueError("PEEKING needs make_case(..., days=...)")
+    from peer_agent import stats
+
+    last = int(df.day.max())
+    for day in range(3, last + 1):
+        snap = df.loc[df.day <= day]
+        if _two_prop_p(snap) >= 0.05 or stats.analyze(snap).p_value >= 0.05:
+            continue
+        out = snap.reset_index(drop=True)
+        out.attrs["stopped_day"] = int(day)
+        out.attrs["looks"] = int(day) + 1
+        out.attrs["planned_days"] = int(df.attrs.get("planned_days", last + 1))
+        return out
     return df
+
+
+def _two_prop_p(df: pd.DataFrame) -> float:
+    """Fast screen. `stats.analyze` confirms a hit before the frame is kept."""
+    arm = df.arm.to_numpy().astype(bool)
+    converted = df.converted.to_numpy().astype(float)
+    n_t = int(arm.sum())
+    n_c = int((~arm).sum())
+    if n_t == 0 or n_c == 0:
+        return 1.0
+    pooled = float(converted.mean())
+    se = math.sqrt(pooled * (1 - pooled) * (1 / n_t + 1 / n_c))
+    if se == 0:
+        return 1.0
+    z = (float(converted[arm].mean()) - float(converted[~arm].mean())) / se
+    return math.erfc(abs(z) / math.sqrt(2))
 
 
 def OUTLIERS(df: pd.DataFrame, rng: np.random.Generator) -> pd.DataFrame:
@@ -143,26 +175,64 @@ def make_case(  # noqa: PLR0913 (a simulator needs independent knobs)
     days: int | None = None,
     segments: int | None = None,
 ) -> Case:
+    planted = flaws or []
+    if PEEKING in planted:
+        df = _peek_until_it_stops(n, lift, seed, days, segments, planted)
+        return Case(df=df, truth=Verdict.INVALID)
     rng = np.random.default_rng(seed)
+    df = _populate(n, lift, rng, days, segments)
+    for flaw in planted:
+        df = flaw(df, rng)
+    truth = Verdict.NO_EFFECT if lift == 0.0 else Verdict.SHIP
+    return Case(df=df, truth=truth)
+
+
+def _populate(
+    n: int,
+    lift: float,
+    rng: np.random.Generator,
+    days: int | None,
+    segments: int | None,
+) -> pd.DataFrame:
     arm = rng.random(n) < 0.5
     # Beta shape with mean BASELINE; low enough (0.7) to keep the CUPED covariate
     # correlated with the outcome without swamping the fixed-seed lift estimate.
     shape_a = 0.7
     shape_b = shape_a * (1 - BASELINE) / BASELINE
-    propensity = rng.beta(shape_a, shape_b, size=n)  # per-unit pre-experiment propensity
+    propensity = rng.beta(shape_a, shape_b, size=n)
     rate = np.clip(np.where(arm, propensity * (1 + lift), propensity), 0, 1)
-    converted = rng.random(n) < rate
     data: dict[str, np.ndarray] = {
         "arm": arm,
-        "converted": converted,
+        "converted": rng.random(n) < rate,
         "pre_period_metric": propensity,
     }
     if days:
         data["day"] = rng.integers(0, days, size=n)
     if segments:
         data["segment"] = rng.integers(0, segments, size=n)
-    df = pd.DataFrame(data)
-    for flaw in flaws or []:
-        df = flaw(df, rng)
-    truth = Verdict.NO_EFFECT if lift == 0.0 else Verdict.SHIP
-    return Case(df=df, truth=truth)
+    return pd.DataFrame(data)
+
+
+def _peek_until_it_stops(  # noqa: PLR0913, PLR0917 (the same knobs make_case already takes)
+    n: int,
+    lift: float,
+    seed: int,
+    days: int | None,
+    segments: int | None,
+    planted: list[Flaw],
+) -> pd.DataFrame:
+    if not days:
+        raise ValueError("PEEKING needs make_case(..., days=...)")
+    others = [flaw for flaw in planted if flaw is not PEEKING]
+    for attempt in range(50):
+        trial = seed + attempt * 1000
+        rng = np.random.default_rng(trial)
+        df = _populate(n, lift, rng, days, segments)
+        df.attrs["planned_days"] = days
+        for flaw in others:
+            df = flaw(df, rng)
+        peeked = PEEKING(df, rng)
+        if "stopped_day" in peeked.attrs:
+            peeked.attrs["peeking_seed"] = trial
+            return peeked
+    raise RuntimeError(f"PEEKING found no optional stop within 50 seeds of {seed}")

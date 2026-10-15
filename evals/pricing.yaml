@@ -1,0 +1,4 @@
+# USD per million tokens, keyed by the model name stored on a variant.
+# A model that is not listed here gets cost_usd: null. Never treat a missing
+# card as zero.
+{}

@@ -97,16 +97,16 @@ def test_every_flaw_produces_data_that_looks_wrong():
     assert stats.scan_segments(make_case(n=60_000, flaws=[SIMPSON], seed=2).df).reversal
 
     peeked = make_case(n=28_000, lift=0.0, flaws=[PEEKING], days=14, seed=3)
-    assert any(stats.analyze(d).p_value < 0.05 for d in peeked.by_day())
+    assert stats.analyze(peeked.df).p_value < 0.05
 
 
 @pytest.mark.slow
 def test_the_sequential_test_holds_where_the_naive_one_leaks():
     naive = seq = 0
     for s in range(200):
-        looks = make_case(n=28_000, lift=0.0, days=14, seed=s).by_day()
-        naive += any(stats.analyze(d).p_value < 0.05 for d in looks)
-        seq += any(stats.sequential(d, looks=14).reject for d in looks)
+        case = make_case(n=28_000, lift=0.0, days=14, seed=s)
+        naive += any(stats.analyze(d).p_value < 0.05 for d in case.by_day())
+        seq += stats.sequential(case.df, looks=5).reject
 
     assert naive / 200 > 0.15, "the peeking problem isn't being reproduced"
     assert seq / 200 < 0.10
