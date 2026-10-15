@@ -29,11 +29,12 @@ go deeper. This file is the checkpoint that says the phase is finished.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from conftest import names
 
-from peer_agent.evals import load_suite, run_suite
+from peer_agent.evals import check_regression, load_suite, run_suite
 from peer_agent.tools import default_tools
 
 REPLAY = "fixtures/recorded.jsonl"
@@ -111,7 +112,7 @@ def test_every_case_in_the_suite_has_a_known_answer():
     from peer_agent.types import Verdict
 
     suite = load_suite()
-    assert len(suite) == 50
+    assert len(suite) == 55
     for case in suite:
         assert case.truth in Verdict
         assert case.seed is not None
@@ -120,24 +121,37 @@ def test_every_case_in_the_suite_has_a_known_answer():
 def test_the_suite_covers_all_five_flaws():
     """A grade averaged over four categories isn't the grade I publish."""
     flaws = {case.flaw for case in load_suite()}
-    assert flaws == {"srm", "novelty", "simpson", "peeking", "clean"}
+    assert flaws == {"srm", "novelty", "simpson", "peeking", "clean", "outliers"}
+
+
+def _stable(report):
+    """Drop the fields a second replay is allowed to change."""
+    payload = report.to_json()
+    payload.pop("generated_at")
+    payload.pop("run_id")
+    for case in payload["cases"]:
+        case.pop("latency_s", None)
+    for variant in payload["variants"]:
+        variant.pop("latency_s", None)
+    return payload
 
 
 def test_a_replayed_run_is_byte_identical(tmp_path):
-    """Recorded responses in, same report out. Without this, CI is theatre."""
+    """Recorded responses in, same report out. The clock is not part of that."""
     a = run_suite(load_suite(), replay=REPLAY, out=tmp_path / "a")
     b = run_suite(load_suite(), replay=REPLAY, out=tmp_path / "b")
-    assert a.to_json() == b.to_json()
+    assert _stable(a) == _stable(b)
 
 
 def test_the_baseline_gate_catches_a_regression(tmp_path):
     with open("evals/baseline.json") as f:
         baseline = json.loads(f.read())
     current = run_suite(load_suite(), replay=REPLAY, out=tmp_path)
+    assert check_regression(current, baseline, mode="replay") == []
 
-    assert current.accuracy >= baseline["accuracy"] - 0.02
-    for flaw, score in baseline["by_flaw"].items():
-        assert current.by_flaw[flaw] >= score - 0.10, f"regression in {flaw}"
+    broken = json.loads(json.dumps(baseline))
+    broken["replay_expected"]["accuracy"] = 1.0
+    assert check_regression(current, broken, mode="replay")
 
 
 @pytest.mark.live
@@ -206,7 +220,7 @@ def test_results_json_is_the_shape_the_page_reads(tmp_path):
     report = json.loads((tmp_path / "results.json").read_text())
 
     assert {"accuracy", "cases", "by_flaw", "models", "generated_at"} <= report.keys()
-    assert len(report["cases"]) == 50
+    assert len(report["cases"]) == 110
     for case in report["cases"]:
         assert {
             "id",
@@ -237,9 +251,11 @@ def test_the_failures_i_publish_are_still_failing(tmp_path):
     """Don't perform humility about bugs I've since fixed."""
     run_suite(load_suite(), replay=REPLAY, out=tmp_path)
     report = json.loads((tmp_path / "results.json").read_text())
-    published = {f["case_id"] for f in report["published_failures"]}
+    published = json.loads(Path("evals/published_failures.json").read_text())
+    assert "scripted" not in json.dumps(published)
+    claimed = {item["case_id"] for item in published}
     failing = {c["id"] for c in report["cases"] if not c["correct"]}
-    assert published <= failing, f"claimed as broken but now passing: {published - failing}"
+    assert claimed <= failing, f"claimed as broken but now passing: {claimed - failing}"
 
 
 def test_the_page_reads_nothing_but_results_json():

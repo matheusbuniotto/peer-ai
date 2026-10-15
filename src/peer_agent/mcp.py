@@ -48,7 +48,7 @@ def analyze(
 
 @server.tool()
 def sequential(path: str, looks: int) -> dict[str, Any]:
-    """Bonferroni-corrected look: conservative, transparent, easy to defend."""
+    """Lan-DeMets O'Brien-Fleming boundaries across `looks` (alpha spending)."""
     return _asdict(stats.sequential(pd.read_parquet(path), looks))
 
 

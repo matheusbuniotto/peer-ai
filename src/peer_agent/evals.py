@@ -1,34 +1,60 @@
+"""Run the suite, score it, and decide whether a run may merge.
+
+Replay is a harness gate: the recorded turns are fixed, so a change in parsing,
+scoring, or the schema moves the number and an unchanged model cannot. A live
+run is the model and prompt gate. The two are not the same comparison.
+"""
+
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
+import subprocess
+import threading
+import time
+from collections import Counter
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import logfire
+import numpy as np
+import pandas as pd
 import yaml
-from pydantic_ai.models.openai import OpenAIChatModel, OpenAIChatModelSettings
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
-from peer_agent.agent import Agent, Trajectory, json_default
-from peer_agent.sim import NOVELTY, PEEKING, SIMPSON, SRM, Case, Flaw, make_case
+from peer_agent.agent import Agent, Trajectory, chat_settings, json_default
+from peer_agent.scoring import (
+    classify_error,
+    mcnemar,
+    pass_at_k,
+    pass_hat_k,
+    srm_checked_before_lift,
+    wilson,
+)
+from peer_agent.sim import NOVELTY, OUTLIERS, PEEKING, SIMPSON, SRM, Case, Flaw, make_case
 from peer_agent.tools import Tool, analysis_tools
 from peer_agent.types import Verdict
 
 _SUITE_PATH = Path("evals/suite.yaml")
-_PUBLISHED_FAILURES_PATH = Path("evals/published_failures.json")
+_PRICES_PATH = Path("evals/pricing.yaml")
 _TOOLS_SUFFIX = " (tools)"
 _NO_TOOLS_SUFFIX = " (no tools)"
+_PROMPT_PATH = "prompt.md"
 
 _FLAW_FNS: dict[str, Flaw] = {
     "srm": SRM,
     "novelty": NOVELTY,
     "simpson": SIMPSON,
     "peeking": PEEKING,
+    "outliers": OUTLIERS,
 }
 
 
@@ -46,7 +72,7 @@ class EvalCase:
         flaws = [_FLAW_FNS[self.flaw]] if self.flaw in _FLAW_FNS else None
         return make_case(
             n=self.n, lift=self.lift, seed=self.seed, flaws=flaws, days=self.days
-        )
+        )  # noqa: E501
 
 
 def load_suite(path: str | Path = _SUITE_PATH) -> list[EvalCase]:
@@ -65,6 +91,15 @@ def load_suite(path: str | Path = _SUITE_PATH) -> list[EvalCase]:
     ]
 
 
+def load_prices(path: str | Path = _PRICES_PATH) -> dict[str, dict[str, float]]:
+    file = Path(path)
+    if not file.exists():
+        return {}
+    data = yaml.safe_load(file.read_text()) or {}
+    models = data.get("models", data)
+    return models if isinstance(models, dict) else {}
+
+
 class _ReplayLLM:
     """Same turn shape as conftest.py's FakeLLM — a tool-call list, or a final string."""
 
@@ -79,28 +114,35 @@ class _ReplayLLM:
         return [(name, args) for name, args in turn]
 
 
-def _load_recorded(path: str | Path) -> dict[tuple[str, str], list[Any]]:
-    recorded: dict[tuple[str, str], list[Any]] = {}
+def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], list[Any]]:
+    recorded: dict[tuple[str, str, int], list[Any]] = {}
     for line in Path(path).read_text().splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        recorded[(row["case_id"], row["model"])] = row["turns"]
+        recorded[(row["case_id"], row["model"], int(row.get("trial", 0)))] = row["turns"]
     return recorded
 
 
 def _live_model(model: str) -> OpenAIChatModel:
-    provider = OpenAIProvider(
-        base_url=os.environ["LLM_BASE_URL"], api_key=os.environ["LLM_API_KEY"]
+    base_url = os.environ["LLM_BASE_URL"]
+    provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+    return OpenAIChatModel(model, provider=provider, settings=chat_settings(base_url))
+
+
+def _review_question(case: Case) -> str:
+    stopped = case.df.attrs.get("stopped_day")
+    if stopped is None:
+        return "Review this experiment."
+    return (
+        f"Review this experiment. The team checked daily and stopped on day {int(stopped)}."
     )
-    settings = OpenAIChatModelSettings(openai_store=False)
-    return OpenAIChatModel(model, provider=provider, settings=settings)
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:
     turns = [
-        {"turn": i, "act": c.name, "body": {"args": c.args, "result": c.result}}
-        for i, c in enumerate(traj.calls)
+        {"turn": i, "act": call.name, "body": {"args": call.args, "result": call.result}}
+        for i, call in enumerate(traj.calls)
     ]
     turns.append(
         {
@@ -112,73 +154,272 @@ def _turns(traj: Trajectory) -> list[dict[str, Any]]:
     return turns
 
 
-@dataclass
-class _Variant:
-    label: str
-    accuracy: float
-    false_ships: float
-    false_blocks: float
-    by_flaw: dict[str, float]
-    cases: list[dict[str, Any]]
+def _replay_turns(traj: Trajectory) -> list[Any]:
+    turns: list[Any] = [[[call.name, call.args]] for call in traj.calls]
+    turns.append(traj.answer)
+    return turns
 
 
-def _run_variant(
-    suite: list[EvalCase],
+def _cost(
+    model: str, row: dict[str, Any], prices: dict[str, dict[str, float]]
+) -> float | None:  # noqa: E501
+    card = prices.get(model)
+    if card is None or row["input_tokens"] is None or row["output_tokens"] is None:
+        return None
+    million = 1_000_000
+    return (
+        row["input_tokens"] * card["input_per_mtok"]
+        + row["output_tokens"] * card["output_per_mtok"]  # noqa: E501
+    ) / million
+
+
+def _usage_tokens(traj: Trajectory, mode: str) -> tuple[int | None, int | None]:
+    if mode == "replay" or traj.usage is None:
+        return None, None
+    return traj.usage.input_tokens, traj.usage.output_tokens
+
+
+def _case_row(  # noqa: PLR0913 (one field group for a case row)
+    ec: EvalCase,
+    traj: Trajectory,
     *,
     label: str,
-    tools: list[Tool],
-    llm_for: Callable[[EvalCase], Any],
-) -> _Variant:
+    model: str,
+    trial: int,
+    mode: str,
+    prices: dict[str, dict[str, float]],
+) -> dict[str, Any]:
+    error = classify_error(ec, traj)
+    input_tokens, output_tokens = _usage_tokens(traj, mode)
+    row: dict[str, Any] = {
+        "id": ec.id,
+        "flaw": ec.flaw,
+        "truth": ec.truth.name,
+        "variant": label,
+        "model": model,
+        "trial": trial,
+        "verdict": traj.verdict.name if traj.verdict else None,
+        "correct": error is None,
+        "error": None if error is None else error.value,
+        "srm_checked_before_lift": srm_checked_before_lift(traj),
+        "latency_s": traj.latency_s,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "trajectory": _turns(traj),
+    }
+    row["cost_usd"] = _cost(model, row, prices)
+    return row
+
+
+def _annotate(span: Any, row: dict[str, Any]) -> None:
+    setter = getattr(span, "set_attribute", None)
+    if setter is None:
+        return
+    setter("gen_ai.usage.input_tokens", row["input_tokens"] or 0)
+    setter("gen_ai.usage.output_tokens", row["output_tokens"] or 0)
+    setter("peer.cost_usd", 0 if row["cost_usd"] is None else row["cost_usd"])
+    setter("peer.error_category", row["error"] or "")
+    setter("peer.correct", bool(row["correct"]))
+
+
+@dataclass(frozen=True)
+class _Ctx:
+    label: str
+    model: str
+    mode: str
+    trial: int
+    tools: list[Tool]
+    prices: dict[str, dict[str, float]]
+    recorder: Callable[[dict[str, Any]], None] | None
+
+
+def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
+    started = time.perf_counter()
+    try:
+        built = ec.build()
+        with logfire.span(
+            "eval.case", case_id=ec.id, flaw=ec.flaw, trial=ctx.trial, variant=ctx.label
+        ) as span:
+            traj = Agent(llm, tools=ctx.tools).review(
+                built, question=_review_question(built)
+            )  # noqa: E501
+            row = _case_row(
+                ec,
+                traj,
+                label=ctx.label,
+                model=ctx.model,
+                trial=ctx.trial,
+                mode=ctx.mode,
+                prices=ctx.prices,  # noqa: E501
+            )
+            _annotate(span, row)
+    except Exception as exc:
+        traj = Trajectory(
+            done=False,
+            error=f"{type(exc).__name__}: {exc}",
+            latency_s=time.perf_counter() - started,
+        )
+        row = _case_row(
+            ec,
+            traj,
+            label=ctx.label,
+            model=ctx.model,
+            trial=ctx.trial,
+            mode=ctx.mode,
+            prices=ctx.prices,  # noqa: E501
+        )
+    if ctx.recorder is not None:
+        ctx.recorder(
+            {
+                "case_id": ec.id,
+                "model": ctx.label,
+                "trial": ctx.trial,
+                "turns": _replay_turns(traj),
+            }  # noqa: E501
+        )
+    return row
+
+
+def _run_once(
+    suite: list[EvalCase],
+    factory: Callable[[EvalCase, int], Any],
+    ctx: _Ctx,
+    concurrency: int,
+) -> list[dict[str, Any]]:  # noqa: E501
     dataset = Dataset(
         name="peer-eval", cases=[EvalsCase(name=ec.id, inputs=ec) for ec in suite]
-    )
+    )  # noqa: E501
 
-    def task(ec: EvalCase) -> Trajectory:
-        return Agent(llm_for(ec), tools=tools).review(ec.build())
+    def task(ec: EvalCase) -> dict[str, Any]:
+        return _one_case(ec, factory(ec, ctx.trial), ctx)
 
-    report = dataset.evaluate_sync(task, progress=False)
-    by_id = {rc.name: rc for rc in report.cases}
-
-    cases: list[dict[str, Any]] = []
-    correct = false_ships = false_blocks = 0
-    flaw_correct: dict[str, int] = {}
-    flaw_total: dict[str, int] = {}
-    for ec in suite:
-        traj: Trajectory = by_id[ec.id].output
-        is_correct = traj.verdict is ec.truth
-        correct += is_correct
-        if traj.verdict is Verdict.SHIP and ec.truth is not Verdict.SHIP:
-            false_ships += 1
-        if traj.verdict is not Verdict.SHIP and ec.truth is Verdict.SHIP:
-            false_blocks += 1
-        flaw_total[ec.flaw] = flaw_total.get(ec.flaw, 0) + 1
-        flaw_correct[ec.flaw] = flaw_correct.get(ec.flaw, 0) + is_correct
-        cases.append(
-            {
-                "id": ec.id,
-                "flaw": ec.flaw,
-                "correct": is_correct,
-                "truth": ec.truth.name,
-                "verdict": traj.verdict.name if traj.verdict else None,
-                "trajectory": _turns(traj),
-            }
-        )
-    n = len(suite)
-    return _Variant(
-        label=label,
-        accuracy=correct / n,
-        false_ships=false_ships / n,
-        false_blocks=false_blocks / n,
-        by_flaw={flaw: flaw_correct[flaw] / flaw_total[flaw] for flaw in flaw_total},
-        cases=cases,
-    )
+    report = dataset.evaluate_sync(task, progress=False, max_concurrency=concurrency)
+    order = {ec.id: index for index, ec in enumerate(suite)}
+    rows = [case.output for case in report.cases]
+    rows.sort(key=lambda row: order[row["id"]])
+    return rows
 
 
-def _load_published_failures() -> list[dict[str, Any]]:
-    if not _PUBLISHED_FAILURES_PATH.exists():
-        return []
-    data: list[dict[str, Any]] = json.loads(_PUBLISHED_FAILURES_PATH.read_text())
-    return data
+def _vote(flags: list[bool]) -> bool:
+    if len(flags) == 1:
+        return flags[0]
+    votes = sum(flags)
+    if votes * 2 == len(flags):
+        return flags[0]
+    return votes * 2 > len(flags)
+
+
+def _matrix(
+    rows: list[dict[str, Any]], case_ids: list[str], trials: int
+) -> list[list[bool]]:  # noqa: E501
+    found = {(row["id"], row["trial"]): bool(row["correct"]) for row in rows}
+    return [[found[(case_id, trial)] for trial in range(trials)] for case_id in case_ids]
+
+
+def _mean(values: list[float]) -> float | None:
+    if not values or any(value is None for value in values):
+        return None
+    return float(sum(values)) / len(values)
+
+
+def _by_flaw(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Trial 0 only, so `n` is the number of cases and the Wilson interval matches it."""
+    trial0 = [row for row in rows if row["trial"] == 0]
+    flaws = sorted({row["flaw"] for row in trial0})
+    summary = {}
+    for flaw in flaws:
+        subset = [row for row in trial0 if row["flaw"] == flaw]
+        hits = sum(bool(row["correct"]) for row in subset)
+        low, high = wilson(hits, len(subset))
+        summary[flaw] = {"acc": hits / len(subset), "ci": [low, high], "n": len(subset)}
+    return summary
+
+
+def _summarize(  # noqa: PLR0913, PLR0917
+    rows: list[dict[str, Any]],
+    case_ids: list[str],
+    trials: int,
+    label: str,
+    model: str,
+    tools: bool,
+) -> dict[str, Any]:
+    by_trial = []
+    for trial in range(trials):
+        subset = [row for row in rows if row["trial"] == trial]
+        by_trial.append(sum(bool(row["correct"]) for row in subset) / len(subset))
+    trial0 = [row for row in rows if row["trial"] == 0]
+    hits = sum(bool(row["correct"]) for row in trial0)
+    latency = np.asarray([row["latency_s"] for row in rows], dtype=float)
+    tokens_in = _mean([row["input_tokens"] for row in rows])
+    tokens_out = _mean([row["output_tokens"] for row in rows])
+    costs = [row["cost_usd"] for row in rows]
+    total = None if any(cost is None for cost in costs) else float(sum(costs))
+    matrix = _matrix(rows, case_ids, trials)
+    return {
+        "label": label,
+        "model": model,
+        "tools": tools,
+        "accuracy": float(np.mean(by_trial)),
+        "accuracy_ci": list(wilson(hits, len(trial0))),
+        "accuracy_by_trial": by_trial,
+        "pass_at_k": pass_at_k(matrix),
+        "pass_hat_k": pass_hat_k(matrix),
+        "false_ships": _rate(rows, "SHIP", wrong=True),
+        "false_blocks": _block_rate(rows),
+        "by_flaw": _by_flaw(rows),
+        "errors": dict(Counter(row["error"] for row in rows if row["error"])),
+        "process": {
+            "srm_checked_before_lift": float(
+                np.mean([row["srm_checked_before_lift"] for row in rows])
+            )  # noqa: E501
+        },
+        "cost_usd": {
+            "total": total,
+            "per_case_mean": None if total is None else total / len(rows),
+        },  # noqa: E501
+        "latency_s": {
+            "p50": float(np.percentile(latency, 50)),
+            "p95": float(np.percentile(latency, 95)),
+        },  # noqa: E501
+        "tokens": {
+            "input": None if tokens_in is None else int(round(tokens_in * len(rows))),
+            "output": None if tokens_out is None else int(round(tokens_out * len(rows))),
+        },
+    }
+
+
+def _rate(rows: list[dict[str, Any]], verdict: str, *, wrong: bool) -> float:
+    del wrong
+    flagged = sum(row["verdict"] == verdict and row["truth"] != verdict for row in rows)
+    return flagged / len(rows)
+
+
+def _block_rate(rows: list[dict[str, Any]]) -> float:
+    flagged = sum(row["truth"] == "SHIP" and row["verdict"] != "SHIP" for row in rows)
+    return flagged / len(rows)
+
+
+def _compare(  # noqa: PLR0913, PLR0917
+    a: dict[str, Any],
+    b: dict[str, Any],
+    a_rows: list[dict[str, Any]],
+    b_rows: list[dict[str, Any]],
+    case_ids: list[str],
+    trials: int,
+) -> dict[str, Any]:
+    result = mcnemar(_voted(a_rows, case_ids, trials), _voted(b_rows, case_ids, trials))
+    return {
+        "a": a["label"],
+        "b": b["label"],
+        "b_only_a_right": result.b,
+        "c_only_b_right": result.c,
+        "p_value": result.p_value,
+        "method": result.method,
+    }
+
+
+def _voted(rows: list[dict[str, Any]], case_ids: list[str], trials: int) -> list[bool]:
+    return [_vote(flags) for flags in _matrix(rows, case_ids, trials)]
 
 
 @dataclass
@@ -190,100 +431,463 @@ class Report:
     cases: list[dict[str, Any]]
     models: list[dict[str, Any]]
     published_failures: list[dict[str, Any]]
+    accuracy_ci: tuple[float, float] = (0.0, 1.0)
+    variants: list[dict[str, Any]] = field(default_factory=list)
+    comparisons: list[dict[str, Any]] = field(default_factory=list)
+    schema_version: int = 2
+    run_id: str = ""
+    git_sha: str = ""
+    suite_sha256: str = ""
+    prompt_sha256: str = ""
+    mode: str = "replay"
+    trials: int = 1
+    temperature: float | None = None
     generated_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_json(self) -> dict[str, Any]:
         return {
+            "schema_version": self.schema_version,
+            "run_id": self.run_id,
+            "git_sha": self.git_sha,
+            "suite_sha256": self.suite_sha256,
+            "prompt_sha256": self.prompt_sha256,
+            "mode": self.mode,
+            "trials": self.trials,
+            "temperature": self.temperature,
+            "generated_at": self.generated_at,
             "accuracy": self.accuracy,
+            "accuracy_ci": list(self.accuracy_ci),
             "false_ships": self.false_ships,
             "false_blocks": self.false_blocks,
             "by_flaw": self.by_flaw,
-            "cases": self.cases,
             "models": self.models,
+            "variants": self.variants,
+            "comparisons": self.comparisons,
+            "cases": self.cases,
             "published_failures": self.published_failures,
         }
 
-    def write(self, out: str | Path) -> None:
-        out = Path(out)
-        out.mkdir(parents=True, exist_ok=True)
-        payload = self.to_json() | {"generated_at": self.generated_at}
-        (out / "results.json").write_text(
-            json.dumps(payload, default=json_default, indent=2)
+    def write(self, out: str | Path, *, nest: bool = False) -> Path:
+        dest = Path(out)
+        if nest:
+            dest = dest / self.run_id
+            Path(out).mkdir(parents=True, exist_ok=True)
+            (Path(out) / "LATEST").write_text(self.run_id + "\n")
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "results.json").write_text(
+            json.dumps(self.to_json(), default=json_default, indent=2) + "\n"
+        )  # noqa: E501
+        _write_cases(dest / "cases.parquet", self.cases)
+        return dest
+
+
+def _write_cases(path: Path, cases: list[dict[str, Any]]) -> None:
+    frame = pd.DataFrame(
+        [{key: case.get(key) for key in _PARQUET_COLUMNS} for case in cases]
+    )
+    if frame.empty:
+        frame = pd.DataFrame(columns=_PARQUET_COLUMNS)
+    frame["correct"] = frame["correct"].astype("int64")
+    frame["srm_checked_before_lift"] = frame["srm_checked_before_lift"].astype("int64")
+    frame.to_parquet(path, index=False)
+
+
+_PARQUET_COLUMNS = (
+    "id",
+    "flaw",
+    "truth",
+    "variant",
+    "model",
+    "trial",
+    "verdict",
+    "correct",
+    "error",
+    "srm_checked_before_lift",
+    "latency_s",
+    "input_tokens",
+    "output_tokens",
+    "cost_usd",
+)
+
+
+def _git_sha() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short=7", "HEAD"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+    except subprocess.CalledProcessError, FileNotFoundError:
+        return "unknown"
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _prompt_sha() -> str:
+    from importlib import resources
+
+    blob = resources.files("peer_agent").joinpath(_PROMPT_PATH).read_bytes()
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _run_id(model: str, when: datetime) -> str:
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in model).strip("-")
+    slug = "-".join(part for part in slug.split("-") if part) or "run"
+    stamp = when.strftime("%Y-%m-%dT%H-%M-%SZ")
+    return f"{stamp}_{slug}_{_git_sha()}"
+
+
+def _model_of(label: str) -> str:
+    return label.removesuffix(_TOOLS_SUFFIX).removesuffix(_NO_TOOLS_SUFFIX)
+
+
+def _failures(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            "case_id": row["id"],
+            "variant": row["variant"],
+            "trial": row["trial"],
+            "note": row["error"],
+        }  # noqa: E501
+        for row in cases
+        if not row["correct"]
+    ]
+
+
+def _primary(variants: list[dict[str, Any]]) -> dict[str, Any]:
+    for variant in variants:
+        if variant["tools"]:
+            return variant
+    return variants[0]
+
+
+def _variant_specs(
+    replay: str | Path | None,
+    model: str | None,
+    tools: list[Tool] | None,
+    variants: tuple[str, ...] | None,
+    llm_for: Callable[[EvalCase, int], Any] | None,
+) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
+    if replay is not None:
+        recorded = _load_recorded(replay)
+        names = sorted({name for _, name, _ in recorded if name.endswith(_TOOLS_SUFFIX)})
+        if len(names) != 1:
+            raise ValueError(f"replay needs one tools variant, found {names}")
+        base = names[0].removesuffix(_TOOLS_SUFFIX)
+        return [
+            (
+                f"{base}{_TOOLS_SUFFIX}",
+                True,
+                _replay_factory(recorded, f"{base}{_TOOLS_SUFFIX}"),
+            ),  # noqa: E501
+            (
+                f"{base}{_NO_TOOLS_SUFFIX}",
+                False,
+                _replay_factory(recorded, f"{base}{_NO_TOOLS_SUFFIX}"),
+            ),  # noqa: E501
+        ]
+    if llm_for is not None:
+        chosen = variants or (("no-tools",) if tools == [] else ("tools",))
+        return _live_specs(model or "fake", chosen, llm_for)
+    if model is None:
+        raise ValueError("run_suite needs either replay= or model=")
+    chosen = variants
+    if chosen is None:
+        chosen = (
+            ("no-tools",)
+            if tools == []
+            else ("tools", "no-tools")
+            if tools is None
+            else ("tools",)
+        )  # noqa: E501
+    return _live_specs(model, chosen, lambda _ec, _trial: _live_model(model))
+
+
+def _replay_factory(
+    recorded: dict[tuple[str, str, int], list[Any]], label: str
+) -> Callable[[EvalCase, int], Any]:  # noqa: E501
+    def factory(ec: EvalCase, trial: int) -> _ReplayLLM:
+        try:
+            turns = recorded[(ec.id, label, trial)]
+        except KeyError as exc:
+            raise KeyError(
+                f"replay has no turns for {ec.id} trial {trial} ({label})"
+            ) from exc  # noqa: E501
+        return _ReplayLLM(turns)
+
+    return factory
+
+
+def _live_specs(
+    model: str,
+    chosen: tuple[str, ...],
+    llm_for: Callable[[EvalCase, int], Any],
+) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
+    return [
+        (
+            f"{model}{_TOOLS_SUFFIX if name != 'no-tools' else _NO_TOOLS_SUFFIX}",
+            name != "no-tools",
+            llm_for,
         )
+        for name in chosen
+    ]
 
 
-def run_suite(
+def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
     suite: list[EvalCase],
     *,
     replay: str | Path | None = None,
     model: str | None = None,
     tools: list[Tool] | None = None,
     out: str | Path | None = None,
+    trials: int = 1,
+    variants: tuple[str, ...] | None = None,
+    concurrency: int = 1,
+    record: str | Path | None = None,
+    llm_for: Callable[[EvalCase, int], Any] | None = None,
+    nest: bool = False,
+    suite_path: str | Path | None = None,
 ) -> Report:
-    if replay is not None:
-        recorded = _load_recorded(replay)
-        model_names = {
-            full.removesuffix(_TOOLS_SUFFIX)
-            for _, full in recorded
-            if full.endswith(_TOOLS_SUFFIX)
-        }
-        (model_name,) = model_names
-        tools_label = f"{model_name}{_TOOLS_SUFFIX}"
-        no_tools_label = f"{model_name}{_NO_TOOLS_SUFFIX}"
-        primary = _run_variant(
-            suite,
-            label=tools_label,
-            tools=analysis_tools(),
-            llm_for=lambda ec: _ReplayLLM(recorded[(ec.id, tools_label)]),
-        )
-        baseline = _run_variant(
-            suite,
-            label=no_tools_label,
-            tools=[],
-            llm_for=lambda ec: _ReplayLLM(recorded[(ec.id, no_tools_label)]),
-        )
-        models = [
-            {"name": primary.label, "accuracy": primary.accuracy},
-            {"name": baseline.label, "accuracy": baseline.accuracy},
-        ]
-    else:
-        if model is None:
-            raise ValueError("run_suite needs either replay= or model=")
-        use_tools = analysis_tools() if tools is None else tools
-        label = f"{model}{_TOOLS_SUFFIX if tools is None else _NO_TOOLS_SUFFIX}"
-        primary = _run_variant(
-            suite, label=label, tools=use_tools, llm_for=lambda _ec: _live_model(model)
-        )
-        models = [{"name": primary.label, "accuracy": primary.accuracy}]
+    if trials < 1:
+        raise ValueError("trials must be >= 1")
+    specs = _variant_specs(replay, model, tools, variants, llm_for)
+    prices = {} if replay is not None else load_prices()
+    mode = "replay" if replay is not None else "live"
+    when = datetime.now(UTC)
+    model_name = _model_of(specs[0][0])
+    recorder, record_file = _recorder(record)
+    case_ids = [ec.id for ec in suite]
+    variant_rows: list[list[dict[str, Any]]] = []
+    summaries: list[dict[str, Any]] = []
+    try:
+        for label, uses_tools, factory in specs:
+            rows: list[dict[str, Any]] = []
+            tool_list = (
+                [] if not uses_tools else analysis_tools() if tools is None else tools
+            )  # noqa: E501
+            if tools == [] and uses_tools:
+                tool_list = []
+            for trial in range(trials):
+                ctx = _Ctx(label, model_name, mode, trial, tool_list, prices, recorder)
+                rows.extend(_run_once(suite, factory, ctx, concurrency))
+            variant_rows.append(rows)
+            summaries.append(
+                _summarize(rows, case_ids, trials, label, model_name, uses_tools)
+            )  # noqa: E501
+    finally:
+        if record_file is not None:
+            record_file.close()
+    return _finish(
+        summaries,
+        variant_rows,
+        case_ids,
+        trials,
+        mode,
+        model_name,
+        when,
+        out,
+        nest,
+        suite_path,  # noqa: E501
+    )
 
+
+def _recorder(
+    record: str | Path | None,
+) -> tuple[Callable[[dict[str, Any]], None] | None, Any]:  # noqa: E501
+    if record is None:
+        return None, None
+    path = Path(record)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("w")
+    lock = threading.Lock()
+
+    def write(row: dict[str, Any]) -> None:
+        with lock:
+            handle.write(json.dumps(row, default=json_default) + "\n")
+
+    return write, handle
+
+
+def _finish(  # noqa: PLR0913, PLR0917 (assembles one report)
+    summaries: list[dict[str, Any]],
+    variant_rows: list[list[dict[str, Any]]],
+    case_ids: list[str],
+    trials: int,
+    mode: str,
+    model_name: str,
+    when: datetime,
+    out: str | Path | None,
+    nest: bool,
+    suite_path: str | Path | None,
+) -> Report:
+    primary = _primary(summaries)
+    cases = [row for rows in variant_rows for row in rows]
+    comparisons = []
+    if len(summaries) >= 2:
+        comparisons.append(
+            _compare(
+                summaries[0],
+                summaries[1],
+                variant_rows[0],
+                variant_rows[1],
+                case_ids,
+                trials,
+            )
+        )  # noqa: E501
+    digest = Path(suite_path or _SUITE_PATH)
     report = Report(
-        accuracy=primary.accuracy,
-        false_ships=primary.false_ships,
-        false_blocks=primary.false_blocks,
-        by_flaw=primary.by_flaw,
-        cases=primary.cases,
-        models=models,
-        published_failures=_load_published_failures(),
+        accuracy=primary["accuracy"],
+        accuracy_ci=tuple(primary["accuracy_ci"]),
+        false_ships=primary["false_ships"],
+        false_blocks=primary["false_blocks"],
+        by_flaw={flaw: stats["acc"] for flaw, stats in primary["by_flaw"].items()},
+        cases=cases,
+        models=[
+            {"name": item["label"], "accuracy": item["accuracy"]} for item in summaries
+        ],  # noqa: E501
+        published_failures=_failures(cases),
+        variants=summaries,
+        comparisons=comparisons,
+        run_id=_run_id(model_name, when),
+        git_sha=_git_sha(),
+        suite_sha256=_sha256(digest) if digest.exists() else "unknown",
+        prompt_sha256=_prompt_sha(),
+        mode=mode,
+        trials=trials,
+        temperature=None,
+        generated_at=when.isoformat(),
     )
     if out is not None:
-        report.write(out)
+        report.write(out, nest=nest)
     return report
 
 
-_ACCURACY_TOLERANCE = 0.02
-_FLAW_TOLERANCE = 0.10
+def check_regression(
+    report: Report, baseline: dict[str, Any], mode: str = "replay"
+) -> list[str]:  # noqa: E501
+    """Replay must match exactly. Live fails only when the interval excludes the baseline."""  # noqa: E501
+    if mode == "live":
+        return _live_gate(report, baseline)
+    return _replay_gate(report, baseline)
 
 
-def check_regression(report: Report, baseline: dict[str, Any]) -> list[str]:
-    """Mirrors test_the_baseline_gate_catches_a_regression's tolerances exactly."""
+def _replay_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
+    expected = baseline.get("replay_expected", baseline)
     violations = []
-    if report.accuracy < baseline["accuracy"] - _ACCURACY_TOLERANCE:
-        floor = baseline["accuracy"] - _ACCURACY_TOLERANCE
-        violations.append(f"accuracy {report.accuracy:.3f} < baseline floor {floor:.3f}")
-    for flaw, score in baseline["by_flaw"].items():
-        current = report.by_flaw.get(flaw, 0.0)
-        if current < score - _FLAW_TOLERANCE:
-            violations.append(
-                f"{flaw}: {current:.3f} < baseline {score:.3f} - {_FLAW_TOLERANCE}"
-            )
+    if not math.isclose(report.accuracy, float(expected["accuracy"]), abs_tol=1e-9):
+        violations.append(
+            f"accuracy {report.accuracy:.6f} != replay_expected {expected['accuracy']}"
+        )  # noqa: E501
+    for flaw, score in expected["by_flaw"].items():
+        target = score["acc"] if isinstance(score, dict) else float(score)
+        current = float(report.by_flaw.get(flaw, 0.0))
+        if not math.isclose(current, float(target), abs_tol=1e-9):
+            violations.append(f"{flaw}: {current:.6f} != replay_expected {target}")
     return violations
+
+
+def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
+    violations = []
+    high = float(report.accuracy_ci[1])
+    if high < float(baseline["accuracy"]):
+        violations.append(
+            f"accuracy CI high {high:.3f} < baseline {float(baseline['accuracy']):.3f}"
+        )
+    limit = float(baseline["false_ships"]) + 0.02
+    if report.false_ships > limit:
+        violations.append(
+            f"false_ships {report.false_ships:.3f} > baseline + 0.02 ({limit:.3f})"
+        )  # noqa: E501
+    if violations:
+        violations.extend(_paired_note(report, baseline))
+    return violations
+
+
+def _paired_note(report: Report, baseline: dict[str, Any]) -> list[str]:
+    variant = baseline.get("primary_variant") or _tools_label(report.cases)
+    left = _align(report.cases, variant)
+    right = _align(baseline.get("cases", []), variant)
+    shared = sorted(set(left) & set(right))
+    if len(shared) < 2:
+        return []
+    result = mcnemar(
+        [left[case_id] for case_id in shared], [right[case_id] for case_id in shared]
+    )  # noqa: E501
+    if result.p_value < 0.05 and report.accuracy < float(baseline["accuracy"]):
+        return [
+            f"McNemar p={result.p_value:.3g} ({result.method}), b={result.b}, c={result.c}"
+        ]  # noqa: E501
+    return []
+
+
+def _tools_label(cases: list[dict[str, Any]]) -> str | None:
+    for case in cases:
+        label = case.get("variant")
+        if isinstance(label, str) and label.endswith(_TOOLS_SUFFIX):
+            return label
+    return None
+
+
+def compare_cases(
+    a_cases: list[dict[str, Any]], b_cases: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """McNemar plus a Newcombe interval on trial-0 rows paired by case id.
+
+    The gate fails when the exact or continuity-corrected test is below 0.05.
+    """
+    from peer_agent.scoring import newcombe_paired
+
+    left = _align(a_cases, _tools_label(a_cases))
+    right = _align(b_cases, _tools_label(b_cases))
+    shared = sorted(set(left) & set(right))
+    a_flags = [left[case_id] for case_id in shared]
+    b_flags = [right[case_id] for case_id in shared]
+    result = mcnemar(a_flags, b_flags)
+    low, high = newcombe_paired(a_flags, b_flags) if shared else (0.0, 0.0)
+    return {
+        "n": len(shared),
+        "b_only_a_right": result.b,
+        "c_only_b_right": result.c,
+        "p_value": result.p_value,
+        "method": result.method,
+        "delta": (sum(a_flags) - sum(b_flags)) / len(shared) if shared else 0.0,
+        "delta_ci": [low, high],
+        "passed": result.p_value >= 0.05,
+    }
+
+
+def _align(cases: list[dict[str, Any]], variant: str | None) -> dict[str, bool]:
+    aligned = {}
+    for case in cases:
+        if int(case.get("trial", 0)) != 0:
+            continue
+        if variant is not None and case.get("variant") not in (None, variant):
+            continue
+        aligned[case["id"]] = bool(case["correct"])
+    return aligned
+
+
+def promote_baseline(
+    results: str | Path, dest: str | Path = "evals/baseline.json"
+) -> dict[str, Any]:  # noqa: E501
+    """Rewrite baseline.json from a results.json. replay_expected is the harness score."""
+    payload = json.loads(Path(results).read_text())
+    primary = _primary(payload["variants"])
+    by_flaw = {flaw: stats["acc"] for flaw, stats in primary["by_flaw"].items()}
+    baseline = {
+        "schema_version": 2,
+        "source_run": payload["run_id"],
+        "model": primary["model"],
+        "trials": payload["trials"],
+        "accuracy": primary["accuracy"],
+        "accuracy_ci": primary["accuracy_ci"],
+        "pass_hat_k": primary["pass_hat_k"],
+        "false_ships": primary["false_ships"],
+        "by_flaw": by_flaw,
+        "replay_expected": {"accuracy": primary["accuracy"], "by_flaw": by_flaw},
+        "primary_variant": primary["label"],
+    }
+    Path(dest).write_text(json.dumps(baseline, indent=2) + "\n")
+    failures = Path("evals/published_failures.json")
+    failures.write_text(json.dumps(payload["published_failures"], indent=2) + "\n")
+    return baseline

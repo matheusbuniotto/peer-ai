@@ -1,3 +1,6 @@
+# Peeking truth is INVALID. The planter keeps the first day d>=3 whose
+# cumulative test has p<0.05, under a true lift of 0. That p-value is an
+# optional-stopping artifact, not a treatment effect.
 cases:
 - id: srm-01
   flaw: srm
@@ -195,70 +198,70 @@ cases:
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-02
   flaw: peeking
   seed: 2
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-03
   flaw: peeking
   seed: 3
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-04
   flaw: peeking
   seed: 4
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-05
   flaw: peeking
   seed: 5
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-06
   flaw: peeking
   seed: 6
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-07
   flaw: peeking
   seed: 7
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-08
   flaw: peeking
   seed: 8
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-09
   flaw: peeking
   seed: 9
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: peeking-10
   flaw: peeking
   seed: 10
   n: 40000
   lift: 0.0
   days: 14
-  truth: NO_EFFECT
+  truth: INVALID
 - id: clean-01
   flaw: clean
   seed: 1
@@ -319,3 +322,33 @@ cases:
   n: 80000
   lift: 0.06
   truth: SHIP
+- id: outliers-01
+  flaw: outliers
+  seed: 1
+  n: 40000
+  lift: 0.0
+  truth: NO_EFFECT
+- id: outliers-02
+  flaw: outliers
+  seed: 2
+  n: 40000
+  lift: 0.0
+  truth: NO_EFFECT
+- id: outliers-03
+  flaw: outliers
+  seed: 3
+  n: 40000
+  lift: 0.0
+  truth: NO_EFFECT
+- id: outliers-04
+  flaw: outliers
+  seed: 4
+  n: 40000
+  lift: 0.0
+  truth: NO_EFFECT
+- id: outliers-05
+  flaw: outliers
+  seed: 5
+  n: 40000
+  lift: 0.0
+  truth: NO_EFFECT

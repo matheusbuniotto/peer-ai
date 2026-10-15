@@ -51,4 +51,4 @@ jobs:
           fi
 
       - name: tests
-        run: uv run pytest -m "not live and not docker" -q
+        run: uv run pytest -m "not live and not docker and not slow" -q

@@ -6,6 +6,8 @@ import json
 import math
 import os
 import re
+import threading
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -68,7 +70,20 @@ class OverBudget(Exception):
     pass
 
 
+def chat_settings(base_url: str) -> OpenAIChatModelSettings:
+    """Leave OpenAI's `store` field off the request when the host is OpenRouter.
+
+    OpenRouter returns 400 for parameters the model page does not list. Other
+    compatible endpoints 500 when conversation storage stays at its default, so
+    those keep `store` off.
+    """
+    if "openrouter.ai" in base_url:
+        return OpenAIChatModelSettings()
+    return OpenAIChatModelSettings(openai_store=False)
+
+
 _logfire_configured = False
+_LOG_LOCK = threading.Lock()
 
 
 def configure_logfire() -> None:
@@ -77,11 +92,25 @@ def configure_logfire() -> None:
     two process-start points a real run comes through. Zero-config locally
     (`send_to_logfire='if-token-present'`); the moment LOGFIRE_TOKEN is set in
     .env, the same code starts shipping traces to a hosted project.
+
+    Set OTEL_EXPORTER_OTLP_ENDPOINT to also export spans over OTLP/HTTP. Logfire
+    reads that variable through the OpenTelemetry exporter; no other setting is
+    required.
     """
     global _logfire_configured
     if _logfire_configured:
         return
-    logfire.configure(send_to_logfire="if-token-present")
+    processors: list[Any] = []
+    if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+
+        processors.append(SimpleSpanProcessor(OTLPSpanExporter()))
+    logfire.configure(
+        send_to_logfire="if-token-present",
+        console=False,
+        additional_span_processors=processors,
+    )
     logfire.instrument_pydantic_ai()
     _logfire_configured = True
 
@@ -115,8 +144,9 @@ def _log_trajectory(kind: str, traj: Trajectory, *, case_id: str | None = None) 
         record["verdict"] = traj.verdict.name
     if traj.spec is not None:
         record["spec"] = traj.spec
-    with path.open("a") as f:
-        f.write(json.dumps(record, default=json_default) + "\n")
+    line = json.dumps(record, default=json_default) + "\n"
+    with _LOG_LOCK, path.open("a") as f:
+        f.write(line)
 
 
 def _srm_broken(calls: list[ToolCall]) -> bool:
@@ -294,6 +324,27 @@ class ToolCall:
     result: object
 
 
+@dataclass(frozen=True)
+class Usage:
+    """Token counts from pydantic-ai's RunUsage. Missing fields stay None."""
+
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    requests: int | None = None
+
+
+def _read_usage(result: Any) -> Usage | None:
+    raw_usage = getattr(result, "usage", None)
+    if raw_usage is None:
+        return None
+    raw = raw_usage() if callable(raw_usage) else raw_usage
+    return Usage(
+        input_tokens=getattr(raw, "input_tokens", None),
+        output_tokens=getattr(raw, "output_tokens", None),
+        requests=getattr(raw, "requests", None),
+    )
+
+
 @dataclass
 class Trajectory:
     calls: list[ToolCall] = field(default_factory=list)
@@ -301,6 +352,9 @@ class Trajectory:
     done: bool = False
     verdict: Verdict | None = None
     spec: DesignSpec | None = None
+    usage: Usage | None = None
+    latency_s: float = 0.0
+    error: str | None = None
 
 
 class Agent:
@@ -316,14 +370,10 @@ class Agent:
         missing = [name for name in required if not os.environ.get(name)]
         if missing:
             raise RuntimeError(f"{', '.join(missing)} not set — see .env.example")
-        provider = OpenAIProvider(
-            base_url=os.environ["LLM_BASE_URL"],
-            api_key=os.environ["LLM_API_KEY"],
-        )
-        # This endpoint 500s if a conversation-storage request is left at its default.
-        settings = OpenAIChatModelSettings(openai_store=False)
+        base_url = os.environ["LLM_BASE_URL"]
+        provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
         model = OpenAIChatModel(
-            os.environ["LLM_MODEL"], provider=provider, settings=settings
+            os.environ["LLM_MODEL"], provider=provider, settings=chat_settings(base_url)
         )
         return cls(model, tools=analysis_tools(Sandbox()))
 
@@ -378,6 +428,7 @@ class Agent:
             ],
         )
         pai_agent.output_validator(_cite_the_toolbox(calls))
+        started = time.perf_counter()
         try:
             result = pai_agent.run_sync(
                 question,
@@ -385,6 +436,7 @@ class Agent:
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        latency_s = time.perf_counter() - started
 
         answer = result.output
         match = _VERDICT_RE.search(answer.upper())
@@ -398,7 +450,15 @@ class Agent:
             # split is a prompting question, not a guarantee — enforce it here so the
             # invariant holds regardless of what the model decides to write.
             answer = _NUMBER_RE.sub("[redacted]", answer)
-        traj = Trajectory(calls=calls, answer=answer, done=True, verdict=verdict, spec=spec)
+        traj = Trajectory(
+            calls=calls,
+            answer=answer,
+            done=True,
+            verdict=verdict,
+            spec=spec,
+            usage=_read_usage(result),
+            latency_s=latency_s,
+        )
         _log_trajectory("review", traj)
         return traj
 
@@ -424,16 +484,27 @@ class Agent:
                 _files_capability(),
             ],
         )
+        started = time.perf_counter()
         try:
             result = pai_agent.run_sync(
                 brief, usage_limits=UsageLimits(request_limit=self.max_turns)
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        latency_s = time.perf_counter() - started
+        usage = _read_usage(result)
 
         if isinstance(result.output, DesignSpec):
-            traj = Trajectory(calls=calls, spec=result.output, done=True)
+            traj = Trajectory(
+                calls=calls, spec=result.output, done=True, usage=usage, latency_s=latency_s
+            )
         else:
-            traj = Trajectory(calls=calls, answer=str(result.output), done=True)
+            traj = Trajectory(
+                calls=calls,
+                answer=str(result.output),
+                done=True,
+                usage=usage,
+                latency_s=latency_s,
+            )
         _log_trajectory("design", traj)
         return traj

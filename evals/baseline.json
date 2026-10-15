@@ -1,10 +1,33 @@
 {
-  "accuracy": 0.94,
+  "schema_version": 2,
+  "source_run": "2026-10-15T19-40-53Z_claude-opus-5_71c0af1",
+  "model": "claude-opus-5",
+  "trials": 1,
+  "accuracy": 0.7636363636363637,
+  "accuracy_ci": [
+    0.6365163381083228,
+    0.8563334413026682
+  ],
+  "pass_hat_k": 0.7636363636363637,
+  "false_ships": 0.03636363636363636,
   "by_flaw": {
-    "srm": 0.9,
+    "clean": 1.0,
     "novelty": 0.9,
+    "outliers": 1.0,
+    "peeking": 0.0,
     "simpson": 0.9,
-    "peeking": 1.0,
-    "clean": 1.0
-  }
+    "srm": 0.9
+  },
+  "replay_expected": {
+    "accuracy": 0.7636363636363637,
+    "by_flaw": {
+      "clean": 1.0,
+      "novelty": 0.9,
+      "outliers": 1.0,
+      "peeking": 0.0,
+      "simpson": 0.9,
+      "srm": 0.9
+    }
+  },
+  "primary_variant": "claude-opus-5 (tools)"
 }

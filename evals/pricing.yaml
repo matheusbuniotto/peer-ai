@@ -1,0 +1,9 @@
+# USD per million tokens, keyed by the model name stored on a variant.
+# A model that is not listed here gets cost_usd: null. Never treat a missing
+# card as zero.
+#
+# openai/gpt-6-luna: OpenRouter /api/v1/models on 2026-10-15.
+# prompt 0.0000001 USD/token, completion 0.0000005 USD/token.
+"openai/gpt-6-luna":
+  input_per_mtok: 0.10
+  output_per_mtok: 0.50

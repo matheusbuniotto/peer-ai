@@ -100,6 +100,12 @@ class SequentialResult:
     reject: bool
     p_value: float
     alpha: float
+    boundaries: tuple[float, ...] = ()
+    z_by_look: tuple[float, ...] = ()
+    stopped_at: int | None = None
+    # "obf_lan_demets" is an alpha-spending design. "bonferroni" spends alpha/k
+    # on the final look only and does not use the boundary fields.
+    method: str = "obf_lan_demets"
 
 
 @dataclass(frozen=True)
