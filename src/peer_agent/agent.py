@@ -130,7 +130,7 @@ def _log_trajectory(kind: str, traj: Trajectory, *, case_id: str | None = None) 
     Append one JSON line per completed review()/design() call to a local log,
     independent of Logfire — grep-able with no network, no token, no browser.
     """
-    path = Path(os.environ.get("PEER_LOG_PATH", "logs/runs.jsonl"))
+    path = Path(os.environ.get("PEER_LOG_PATH") or "logs/runs.jsonl")
     path.parent.mkdir(parents=True, exist_ok=True)
     record: dict[str, Any] = {
         "ts": datetime.now(UTC).isoformat(),

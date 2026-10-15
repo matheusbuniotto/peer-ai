@@ -18,6 +18,19 @@ def _report(accuracy: float, high: float, false_ships: float, cases: list[dict])
     )
 
 
+def test_the_live_gate_uses_accuracy_not_the_replay_figure():
+    report = _report(0.70, 0.80, 0.0, [])
+    baseline = {
+        "accuracy": 0.50,
+        "false_ships": 0.0,
+        "replay_expected": {"accuracy": 0.764, "by_flaw": {}},
+    }
+    violations = check_regression(report, baseline, mode="live")
+    assert not any("accuracy" in item for item in violations)
+    tighter = check_regression(_report(0.55, 0.60, 0.0, []), baseline, mode="live")
+    assert not any("accuracy" in item for item in tighter)
+
+
 def test_a_drop_inside_the_interval_passes():
     report = _report(0.70, 0.85, 0.0, [])
     baseline = {"accuracy": 0.80, "false_ships": 0.0}

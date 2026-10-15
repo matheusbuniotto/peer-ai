@@ -8,6 +8,20 @@ from peer_agent.agent import chat_settings
 from peer_agent.evals import _cost, load_prices
 
 
+def test_openrouter_lists_luna_at_the_card_rate():
+    import json
+    from urllib.request import urlopen
+
+    with urlopen("https://openrouter.ai/api/v1/models", timeout=30) as response:
+        catalog = json.load(response)
+    listed = next(item for item in catalog["data"] if item["id"] == "openai/gpt-6-luna")
+    assert listed["pricing"]["prompt"] == "0.0000001"
+    assert listed["pricing"]["completion"] == "0.0000005"
+    card = load_prices()["openai/gpt-6-luna"]
+    assert card["input_per_mtok"] == pytest.approx(0.10)
+    assert card["output_per_mtok"] == pytest.approx(0.50)
+
+
 def test_gpt_6_luna_uses_the_openrouter_list_price():
     prices = load_prices()
     card = prices["openai/gpt-6-luna"]

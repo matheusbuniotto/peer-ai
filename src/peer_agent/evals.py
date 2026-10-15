@@ -874,6 +874,11 @@ def promote_baseline(
     payload = json.loads(Path(results).read_text())
     primary = _primary(payload["variants"])
     by_flaw = {flaw: stats["acc"] for flaw, stats in primary["by_flaw"].items()}
+    if payload.get("mode") == "live":
+        harness = run_suite(load_suite(), replay="fixtures/recorded.jsonl", trials=1)
+        replay_expected = {"accuracy": harness.accuracy, "by_flaw": harness.by_flaw}
+    else:
+        replay_expected = {"accuracy": primary["accuracy"], "by_flaw": by_flaw}
     baseline = {
         "schema_version": 2,
         "source_run": payload["run_id"],
@@ -884,7 +889,7 @@ def promote_baseline(
         "pass_hat_k": primary["pass_hat_k"],
         "false_ships": primary["false_ships"],
         "by_flaw": by_flaw,
-        "replay_expected": {"accuracy": primary["accuracy"], "by_flaw": by_flaw},
+        "replay_expected": replay_expected,
         "primary_variant": primary["label"],
     }
     Path(dest).write_text(json.dumps(baseline, indent=2) + "\n")

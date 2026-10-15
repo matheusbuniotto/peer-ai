@@ -113,17 +113,25 @@ def _eval(args: argparse.Namespace) -> int:
     from peer_agent.evals import check_regression, load_suite, run_suite
 
     suite = load_suite()
-    report = run_suite(
-        suite,
-        replay=None if args.model else args.replay,
-        model=args.model,
-        out=args.out,
-        trials=args.trials,
-        variants=_variants(args.variants),
-        concurrency=args.concurrency,
-        record=args.record,
-        nest=bool(args.out),
-    )
+    partial = Path(f"{args.record}.partial") if args.record else None
+    try:
+        report = run_suite(
+            suite,
+            replay=None if args.model else args.replay,
+            model=args.model,
+            out=args.out,
+            trials=args.trials,
+            variants=_variants(args.variants),
+            concurrency=args.concurrency,
+            record=partial,
+            nest=bool(args.out),
+        )
+    except Exception:
+        if partial is not None:
+            partial.unlink(missing_ok=True)
+        raise
+    if partial is not None and not _keep_recording(args, report, partial):
+        return 1
     _print_report(report)
     if not args.gate:
         return 0
@@ -136,6 +144,21 @@ def _eval(args: argparse.Namespace) -> int:
         return 1
     print("\nregression gate: OK")
     return 0
+
+
+def _keep_recording(args: argparse.Namespace, report: Any, partial: Path) -> bool:
+    """Replace the fixture only after a live run that actually called the model."""
+    missing = any(
+        str(row["variant"]).endswith(" (tools)") and row["input_tokens"] is None
+        for row in report.cases
+    )
+    if args.model and missing:
+        partial.unlink(missing_ok=True)
+        print("live record refused: a tools row has no input tokens")
+        return False
+    Path(args.record).parent.mkdir(parents=True, exist_ok=True)
+    os.replace(partial, args.record)
+    return True
 
 
 def _variants(raw: str | None) -> tuple[str, ...] | None:
