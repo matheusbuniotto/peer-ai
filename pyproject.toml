@@ -1,7 +1,7 @@
 [project]
 name = "peerai"
 version = "0.1.0"
-description = "Add your description here"
+description = "A skeptical A/B-test reviewer: deterministic stats, a pydantic-ai agent, and evals with uncertainty."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -20,7 +20,18 @@ dependencies = [
 peer = "peer_agent.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.3", "prek>=0.5.2", "ty>=0.0.78"]
+dev = [
+    "pytest>=8.3",
+    "prek>=0.5.2",
+    "ty>=0.0.78",
+    "statsmodels>=0.15.0",
+    "pytest-cov>=7.1.0",
+    "jsonschema>=4.26",
+    "duckdb>=1.1",
+]
+
+[project.optional-dependencies]
+braintrust = ["braintrust>=0.1"]
 
 [build-system]
 requires = ["hatchling"]
