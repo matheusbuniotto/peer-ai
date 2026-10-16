@@ -1,7 +1,7 @@
 -- DuckDB adapter. In BigQuery, point `cases` at the loaded parquet table and
 -- run everything below this view. The queries themselves use only standard SQL.
 CREATE OR REPLACE VIEW cases AS
-SELECT * FROM read_parquet('results/*/cases.parquet');
+SELECT * FROM read_parquet('results/*/cases.parquet', union_by_name=True);
 
 -- Accuracy by model and flaw.
 SELECT model, flaw, AVG(correct) AS accuracy, COUNT(*) AS n

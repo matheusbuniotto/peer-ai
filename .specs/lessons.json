@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 3,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "ac_gap::assert every literal the check names including words such as live not only the identifiers beside them",
+      "text": "Assert every literal the check names, including words such as live, not only the identifiers beside them.",
+      "signal": "ac_gap",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "live-luna-run"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C5"
+      ],
+      "created": "2026-10-16T00:35:28Z",
+      "last_seen": "2026-10-16T00:35:28Z"
+    },
+    {
+      "id": "L-002",
+      "key": "gate_fail::do not require a readme command runner to exit 0 while the suite it executes still fails a trajectory length assertion",
+      "text": "Do not require a README command runner to exit 0 while the suite it executes still fails a trajectory-length assertion.",
+      "signal": "gate_fail",
+      "scope": "",
+      "status": "candidate",
+      "features": [
+        "live-luna-run"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "C12"
+      ],
+      "created": "2026-10-16T00:35:28Z",
+      "last_seen": "2026-10-16T00:35:28Z"
+    }
+  ]
+}
