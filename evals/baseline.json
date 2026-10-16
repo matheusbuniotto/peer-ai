@@ -1,33 +1,33 @@
 {
   "schema_version": 2,
-  "source_run": "2026-10-15T19-40-53Z_claude-opus-5_71c0af1",
-  "model": "claude-opus-5",
-  "trials": 1,
-  "accuracy": 0.7636363636363637,
+  "source_run": "2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920",
+  "model": "openai/gpt-6-luna",
+  "trials": 3,
+  "accuracy": 0.41818181818181815,
   "accuracy_ci": [
-    0.6365163381083228,
-    0.8563334413026682
+    0.2811849723246312,
+    0.5318720078987862
   ],
-  "pass_hat_k": 0.7636363636363637,
-  "false_ships": 0.03636363636363636,
+  "pass_hat_k": 0.38181818181818183,
+  "false_ships": 0.24242424242424243,
   "by_flaw": {
-    "clean": 1.0,
+    "clean": 0.3,
     "novelty": 0.9,
-    "outliers": 1.0,
+    "outliers": 0.0,
     "peeking": 0.0,
-    "simpson": 0.9,
-    "srm": 0.9
+    "simpson": 0.0,
+    "srm": 1.0
   },
   "replay_expected": {
-    "accuracy": 0.7636363636363637,
+    "accuracy": 0.4,
     "by_flaw": {
-      "clean": 1.0,
+      "clean": 0.3,
       "novelty": 0.9,
-      "outliers": 1.0,
+      "outliers": 0.0,
       "peeking": 0.0,
-      "simpson": 0.9,
-      "srm": 0.9
+      "simpson": 0.0,
+      "srm": 1.0
     }
   },
-  "primary_variant": "claude-opus-5 (tools)"
+  "primary_variant": "openai/gpt-6-luna (tools)"
 }

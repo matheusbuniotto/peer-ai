@@ -5,10 +5,9 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 cd "$root"
 
-while IFS= read -r cmd; do
-  echo "+ $cmd"
-  bash -lc "$cmd"
-done < <(python - << 'PY'
+commands=$(mktemp)
+trap 'rm -f "$commands"' EXIT
+uv run python - << 'PY' > "$commands"
 import re
 from pathlib import Path
 
@@ -23,4 +22,8 @@ for block in blocks:
             continue
         print(stripped)
 PY
-)
+
+while IFS= read -r cmd; do
+  echo "+ $cmd"
+  bash -lc "$cmd"
+done < "$commands"

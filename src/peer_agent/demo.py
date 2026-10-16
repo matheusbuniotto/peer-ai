@@ -55,7 +55,6 @@ def _gate() -> int:
     report = run_suite(load_suite(), replay=_REPLAY)
     baseline = json.loads(_BASELINE.read_text())
     violations = check_regression(report, baseline, mode="replay")
-    print(render_table(report.to_json()))
     if violations:
         print("regression gate: FAILED")
         for item in violations:

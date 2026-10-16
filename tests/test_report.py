@@ -18,7 +18,10 @@ def test_readme_table_is_fresh():
     path, payload = _committed()
     block = render_table(payload, source=str(path))
     assert block in Path("README.md").read_text()
-    assert "pass^3" not in block
+    k = int(payload["trials"])
+    assert f"pass^{k}" in block
+    if k != 3:
+        assert "pass^3" not in block
 
 
 def test_error_report_matches_the_replay_and_adds_up():
@@ -27,3 +30,17 @@ def test_error_report_matches_the_replay_and_adds_up():
     assert text == (path.parent / "errors.md").read_text()
     misses = sum(not case["correct"] for case in payload["cases"])
     assert f"Matrix sum: {misses}." in text
+
+
+def test_analysis_sql_runs_cleanly():
+    import duckdb
+
+    sql = Path("analysis/eval_queries.sql").read_text()
+    conn = duckdb.connect()
+    conn.execute(sql)
+
+
+def test_web_results_matches_latest():
+    path, payload = _committed()
+    web_payload = json.loads(Path("web/results.json").read_text())
+    assert web_payload["run_id"] == payload["run_id"]

@@ -12,6 +12,9 @@ wheels/
 .venv
 .env
 .claude
+.cursor
+.windsurf
+.agents
 .scratch
 logs/
 reports/

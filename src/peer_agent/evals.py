@@ -30,7 +30,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
-from peer_agent.agent import Agent, Trajectory, chat_settings, json_default
+from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
     mcnemar,
@@ -133,10 +133,11 @@ def _live_model(model: str) -> OpenAIChatModel:
 def _review_question(case: Case) -> str:
     stopped = case.df.attrs.get("stopped_day")
     if stopped is None:
-        return "Review this experiment."
-    return (
-        f"Review this experiment. The team checked daily and stopped on day {int(stopped)}."
-    )
+        base = "Review this experiment."
+    else:
+        day = int(stopped)
+        base = f"Review this experiment. The team checked daily and stopped on day {day}."
+    return f"{base}\n\n{ROWS_ARE_LOADED}"
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:
@@ -874,6 +875,11 @@ def promote_baseline(
     payload = json.loads(Path(results).read_text())
     primary = _primary(payload["variants"])
     by_flaw = {flaw: stats["acc"] for flaw, stats in primary["by_flaw"].items()}
+    if payload.get("mode") == "live":
+        harness = run_suite(load_suite(), replay="fixtures/recorded.jsonl", trials=1)
+        replay_expected = {"accuracy": harness.accuracy, "by_flaw": harness.by_flaw}
+    else:
+        replay_expected = {"accuracy": primary["accuracy"], "by_flaw": by_flaw}
     baseline = {
         "schema_version": 2,
         "source_run": payload["run_id"],
@@ -884,10 +890,10 @@ def promote_baseline(
         "pass_hat_k": primary["pass_hat_k"],
         "false_ships": primary["false_ships"],
         "by_flaw": by_flaw,
-        "replay_expected": {"accuracy": primary["accuracy"], "by_flaw": by_flaw},
+        "replay_expected": replay_expected,
         "primary_variant": primary["label"],
     }
     Path(dest).write_text(json.dumps(baseline, indent=2) + "\n")
-    failures = Path("evals/published_failures.json")
+    failures = Path(dest).with_name("published_failures.json")
     failures.write_text(json.dumps(payload["published_failures"], indent=2) + "\n")
     return baseline

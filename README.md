@@ -39,20 +39,20 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 
 ## Results
 
-This table is the harness replay in `results/LATEST`. It is not a score for `openai/gpt-6-luna`. `uv run peer report --write-readme` renders it. Do not edit the numbers by hand.
+This table is the live run of `openai/gpt-6-luna` with trials 3 in `results/LATEST`. `uv run peer report --write-readme` renders it. Do not edit the numbers by hand.
 
 <!-- results:start -->
 
-| Variant | Accuracy (95% Wilson CI) | pass^1 | False ship | False block | Cost/case | p50 latency | n |
+| Variant | Accuracy (95% Wilson CI) | pass^3 | False ship | False block | Cost/case | p50 latency | n |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| claude-opus-5 (tools) | 76.4% (63.7%–85.6%) | 76.4% | 3.6% | 0.0% | — | 0.02s | 55 |
-| claude-opus-5 (no tools) | 45.5% (33.0%–58.5%) | 45.5% | 0.0% | 0.0% | — | 0.01s | 55 |
+| openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | 19.73s | 55 |
+| openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | — | 19.06s | 55 |
 
-McNemar `claude-opus-5 (tools)` vs `claude-opus-5 (no tools)`: b=18 (only A right), c=1 (only B right), p=7.63e-05 (exact).
+McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (no tools)`: b=24 (only A right), c=0 (only B right), p=1.19e-07 (exact).
 
-Source: [`results/2026-10-15T19-40-53Z_claude-opus-5_71c0af1/results.json`](results/2026-10-15T19-40-53Z_claude-opus-5_71c0af1/results.json).
+Source: [`results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json`](results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json).
 
-Model `claude-opus-5`, run `2026-10-15T19-40-53Z_claude-opus-5_71c0af1`, 2026-10-15, git `71c0af1`.
+Model `openai/gpt-6-luna`, run `2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920`, 2026-10-16, git `1264920`.
 
 <!-- results:end -->
 
@@ -103,7 +103,7 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export spans over OTLP/HTTP in addition to 
 
 ## Limitations
 
-The numbers in the table are a harness replay of `fixtures/recorded.jsonl`. They are not a live model score. This environment had no `LLM_API_KEY`, so no `mode: "live"` run is committed. The model name on the fixture (`claude-opus-5`) is the label that was recorded with the turns. It is not evidence that this model was called.
+The numbers in the table are a live run of `openai/gpt-6-luna` with trials 3. `fixtures/recorded.jsonl` stores that run's turns, and the replay gate re-scores them.
 
 Replay rows have null tokens and a null cost. Latency is the time to replay the recorded turns and run the tools. The Luna price card applies only when a live run reports token counts.
 
