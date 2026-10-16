@@ -115,6 +115,7 @@ def test_a_live_record_with_no_tokens_keeps_the_fixture(tmp_path, monkeypatch):
 
 
 def test_a_live_promote_keeps_the_one_trial_replay_score(tmp_path):
+    published = Path("evals/published_failures.json").read_bytes()
     live = {
         "mode": "live",
         "run_id": "live-run",
@@ -142,6 +143,8 @@ def test_a_live_promote_keeps_the_one_trial_replay_score(tmp_path):
     assert baseline["by_flaw"] == {"peeking": 0.2}
     assert baseline["replay_expected"]["accuracy"] == harness.accuracy
     assert baseline["replay_expected"]["by_flaw"] == harness.by_flaw
+    assert json.loads((tmp_path / "published_failures.json").read_text()) == []
+    assert Path("evals/published_failures.json").read_bytes() == published
 
 
 def test_demo_prints_one_results_table(capsys):

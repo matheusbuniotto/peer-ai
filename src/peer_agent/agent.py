@@ -54,6 +54,10 @@ _PREREG_PREAMBLE = (
     "Pre-registered plan for this experiment. These choices were fixed before "
     "anyone saw the data — follow them, and say so plainly if you depart from any."
 )
+ROWS_ARE_LOADED = (
+    "The experiment rows are already loaded. The tools read them. "
+    "Do not ask for a file. Call the tools, then give a VERDICT."
+)
 
 
 def _files_capability() -> FileSystem:
@@ -400,7 +404,7 @@ class Agent:
         self,
         case: Any,
         spec: DesignSpec | None = None,
-        question: str = "Review this experiment.",
+        question: str | None = None,
     ) -> Trajectory:
         calls: list[ToolCall] = []
         defaults = _spec_defaults(spec)
@@ -408,6 +412,8 @@ class Agent:
             PaiTool(_bind(t, calls, case.df, **defaults.get(t.name, {})), takes_ctx=False)
             for t in self.tools
         ]
+        if question is None:
+            question = f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
         if spec is not None:
             question = f"{_PREREG_PREAMBLE}\n\n{spec}\n\n{question}"
 

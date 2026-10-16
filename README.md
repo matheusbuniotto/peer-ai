@@ -45,14 +45,14 @@ This table is the live run of `openai/gpt-6-luna` with trials 3 in `results/LATE
 
 | Variant | Accuracy (95% Wilson CI) | pass^3 | False ship | False block | Cost/case | p50 latency | n |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| openai/gpt-6-luna (tools) | 3.6% (1.0%–12.3%) | 0.0% | 3.0% | 7.9% | $0.0011 | 8.68s | 55 |
-| openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | $0.0006 | 9.07s | 55 |
+| openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | 19.73s | 55 |
+| openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | — | 19.06s | 55 |
 
-McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (no tools)`: b=0 (only A right), c=0 (only B right), p=1 (exact).
+McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (no tools)`: b=24 (only A right), c=0 (only B right), p=1.19e-07 (exact).
 
-Source: [`results/2026-10-15T22-41-39Z_openai-gpt-6-luna_84342b0/results.json`](results/2026-10-15T22-41-39Z_openai-gpt-6-luna_84342b0/results.json).
+Source: [`results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json`](results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json).
 
-Model `openai/gpt-6-luna`, run `2026-10-15T22-41-39Z_openai-gpt-6-luna_84342b0`, 2026-10-15, git `84342b0`.
+Model `openai/gpt-6-luna`, run `2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920`, 2026-10-16, git `1264920`.
 
 <!-- results:end -->
 

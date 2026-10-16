@@ -30,7 +30,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
-from peer_agent.agent import Agent, Trajectory, chat_settings, json_default
+from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
     mcnemar,
@@ -133,10 +133,11 @@ def _live_model(model: str) -> OpenAIChatModel:
 def _review_question(case: Case) -> str:
     stopped = case.df.attrs.get("stopped_day")
     if stopped is None:
-        return "Review this experiment."
-    return (
-        f"Review this experiment. The team checked daily and stopped on day {int(stopped)}."
-    )
+        base = "Review this experiment."
+    else:
+        day = int(stopped)
+        base = f"Review this experiment. The team checked daily and stopped on day {day}."
+    return f"{base}\n\n{ROWS_ARE_LOADED}"
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:
@@ -893,6 +894,6 @@ def promote_baseline(
         "primary_variant": primary["label"],
     }
     Path(dest).write_text(json.dumps(baseline, indent=2) + "\n")
-    failures = Path("evals/published_failures.json")
+    failures = Path(dest).with_name("published_failures.json")
     failures.write_text(json.dumps(payload["published_failures"], indent=2) + "\n")
     return baseline

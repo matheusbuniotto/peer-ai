@@ -1,1 +1,1568 @@
-[]
+[
+  {
+    "case_id": "novelty-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "novelty-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "false_block"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_block"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "false_ship"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "srm-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "false_block"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 0,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "novelty-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "false_block"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 1,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "srm-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "srm-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "skipped_srm_check"
+  },
+  {
+    "case_id": "novelty-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "novelty-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "novelty-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "simpson-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "simpson-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "missed_flaw"
+  },
+  {
+    "case_id": "peeking-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "peeking-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "clean-06",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-07",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-08",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "clean-09",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "false_block"
+  },
+  {
+    "case_id": "clean-10",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-01",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-02",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-03",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  },
+  {
+    "case_id": "outliers-04",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "other_wrong"
+  },
+  {
+    "case_id": "outliers-05",
+    "variant": "openai/gpt-6-luna (no tools)",
+    "trial": 2,
+    "note": "format_fail"
+  }
+]
