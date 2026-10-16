@@ -79,6 +79,7 @@ def test_readme_calls_the_table_a_live_luna_run():
     results = text.split("## Results", 1)[1].split("## ", 1)[0]
     limits = text.split("## Limitations", 1)[1].split("## ", 1)[0]
     for section in (results, limits):
+        assert "live" in section
         assert "openai/gpt-6-luna" in section
         assert "trials 3" in section
 
