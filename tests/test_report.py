@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from peer_agent.report import render_errors, render_table
+from peer_agent.report import render_errors
 
 
 def _committed() -> tuple[Path, dict]:

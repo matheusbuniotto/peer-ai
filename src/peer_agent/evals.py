@@ -30,6 +30,7 @@ from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
 from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
+from peer_agent.sandbox import Sandbox
 from peer_agent.scoring import (
     classify_error,
     cluster_rate_regression,
@@ -53,7 +54,6 @@ from peer_agent.sim import (
     make_case,
     make_sequential_case,
 )
-from peer_agent.sandbox import Sandbox
 from peer_agent.tools import Tool, analysis_tools, python_only_tools
 from peer_agent.types import BY_USER, DesignSpec, Verdict
 
@@ -650,9 +650,19 @@ def _variant_label(model: str, key: str) -> str:
     raise ValueError(f"unknown variant {key!r}")
 
 
-def _tools_for_kind(
-    key: str, tools: list[Tool] | None, sandbox: Sandbox
-) -> list[Tool]:
+def _live_variant_keys(
+    tools: list[Tool] | None, variants: tuple[str, ...] | None
+) -> tuple[str, ...]:
+    if variants is not None:
+        return variants
+    if tools == []:
+        return ("no-tools",)
+    if tools is None:
+        return ("tools", "python-only")
+    return ("tools",)
+
+
+def _tools_for_kind(key: str, tools: list[Tool] | None, sandbox: Sandbox) -> list[Tool]:
     if key == "no-tools":
         return []
     if key == "python-only":
@@ -686,30 +696,17 @@ def _variant_specs(
             (control, control_key, _replay_factory(recorded, control)),
         ]
     if llm_for is not None:
-        if variants is not None:
-            chosen = variants
-        elif tools == []:
-            chosen = ("no-tools",)
-        elif tools is None:
-            chosen = ("tools", "python-only")
-        else:
-            chosen = ("tools",)
-        return _live_specs(model or "fake", chosen, llm_for)
+        return _live_specs(model or "fake", _live_variant_keys(tools, variants), llm_for)
     if model is None:
         raise ValueError("run_suite needs either replay= or model=")
-    chosen = variants
-    if chosen is None:
-        chosen = (
-            ("no-tools",)
-            if tools == []
-            else ("tools", "python-only")
-            if tools is None
-            else ("tools",)
-        )  # noqa: E501
-    return _live_specs(model, chosen, lambda _ec, _trial: _live_model(model))
+    return _live_specs(
+        model, _live_variant_keys(tools, variants), lambda _ec, _trial: _live_model(model)
+    )
 
 
-def _replay_control_label(recorded: dict[tuple[str, str, int], list[Any]], base: str) -> str:
+def _replay_control_label(
+    recorded: dict[tuple[str, str, int], list[Any]], base: str
+) -> str:
     python = f"{base}{_PYTHON_ONLY_SUFFIX}"
     legacy = f"{base}{_NO_TOOLS_SUFFIX}"
     if any(name == python for _, name, _ in recorded):
