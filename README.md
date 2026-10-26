@@ -43,10 +43,10 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 
 <!-- results:start -->
 
-| Variant | Accuracy (95% Wilson CI) | pass^3 | False ship | False block | Cost/case | p50 latency | n |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | 19.73s | 55 |
-| openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | — | 19.06s | 55 |
+| Variant | Accuracy (95% Wilson CI) | pass^3 | False ship | False block | Fabricated | Cost/case | p50 latency | n |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | — | 19.73s | 55 |
+| openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | — | — | 19.06s | 55 |
 
 McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (no tools)`: b=24 (only A right), c=0 (only B right), p=1.19e-07 (exact).
 
@@ -115,6 +115,6 @@ The replay gate cannot see a prompt change, because the recorded answers do not 
 
 Peeking truth is `INVALID` because the final p-value is an optional-stopping artifact. A reader who would rather call that `EXTEND` will disagree with ten cases.
 
-There is no human-labelled LLM judge. Scoring is the match between the parsed verdict and the planted truth, plus the process check that `check_srm` ran before a lift was read.
+There is no human-labelled LLM judge. Scoring is the match between the parsed verdict and the planted truth, plus process checks: `check_srm` before lift tools (`srm_checked_before_lift`), and `fabricated` when a numeric claim in the final answer (p-values, lifts, CI bounds, sample sizes, and other literals except 90/95/99 before “CI”) does not match any tool output within relative tolerance `1e-3` (percent/fraction and scientific notation are normalized; spelled-out numbers and ratios are not).
 
 The suite is 55 simulated cases (10 SRM, 10 novelty, 10 Simpson, 5 unplanned peeking, 5 pre-registered sequential, 10 clean, 5 outliers). It is not production traffic.

@@ -20,11 +20,11 @@ def render_table(payload: dict[str, Any], *, source: str | None = None) -> str:
     k = int(payload["trials"])
     header = (
         f"| Variant | Accuracy (95% Wilson CI) | pass^{k} | False ship | "
-        "False block | Cost/case | p50 latency | n |"
+        "False block | Fabricated | Cost/case | p50 latency | n |"
     )
     lines = [
         header,
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for variant in payload["variants"]:
         lines.append(_variant_row(variant))
@@ -68,6 +68,9 @@ def render_errors(payload: dict[str, Any]) -> str:
     for label, rows in _by_variant(cases).items():
         rate = sum(bool(row["srm_checked_before_lift"]) for row in rows) / len(rows)
         lines.append(f"- `{label}`: srm_checked_before_lift {rate:.1%} (n={len(rows)})")
+        if rows and "fabricated" in rows[0]:
+            fab = sum(bool(row["fabricated"]) for row in rows) / len(rows)
+            lines.append(f"- `{label}`: fabricated {fab:.1%} (n={len(rows)})")
     lines += ["", "## Shortest misses", ""]
     shortest = sorted(misses, key=_shortness)[:5]
     if not shortest:
@@ -88,10 +91,12 @@ def _variant_row(variant: dict[str, Any]) -> str:
     cost = variant["cost_usd"]["per_case_mean"]
     cost_cell = "—" if cost is None else f"${cost:.4f}"
     p50 = variant["latency_s"]["p50"]
+    fabricated = variant.get("process", {}).get("fabricated")
+    fab_cell = "—" if fabricated is None else _pct(float(fabricated))
     return (
         f"| {variant['label']} | {_pct(variant['accuracy'])} ({_pct(low)}–{_pct(high)}) "
         f"| {_pct(variant['pass_hat_k'])} | {_pct(variant['false_ships'])} "
-        f"| {_pct(variant['false_blocks'])} | {cost_cell} | {p50:.2f}s | {n} |"
+        f"| {_pct(variant['false_blocks'])} | {fab_cell} | {cost_cell} | {p50:.2f}s | {n} |"
     )
 
 

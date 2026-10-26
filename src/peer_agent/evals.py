@@ -40,6 +40,7 @@ from peer_agent.scoring import (
     pass_hat_k,
     run_failure_row,
     srm_checked_before_lift,
+    trajectory_fabricated,
     wilson,
 )
 from peer_agent.sim import (
@@ -270,6 +271,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
         "error": None if error is None else error.value,
         "failure_detail": failure_detail,
         "srm_checked_before_lift": srm_checked_before_lift(traj),
+        "fabricated": trajectory_fabricated(traj),
         "latency_s": traj.latency_s,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
@@ -444,7 +446,8 @@ def _summarize(  # noqa: PLR0913, PLR0917
         "process": {
             "srm_checked_before_lift": float(
                 np.mean([row["srm_checked_before_lift"] for row in rows])
-            )  # noqa: E501
+            ),  # noqa: E501
+            "fabricated": float(np.mean([row["fabricated"] for row in rows])),
         },
         "cost_usd": {
             "total": total_cost,
@@ -564,6 +567,7 @@ def _write_cases(path: Path, cases: list[dict[str, Any]]) -> None:
         frame = pd.DataFrame(columns=_PARQUET_COLUMNS)
     frame["correct"] = frame["correct"].astype("int64")
     frame["srm_checked_before_lift"] = frame["srm_checked_before_lift"].astype("int64")
+    frame["fabricated"] = frame["fabricated"].astype("int64")
     frame.to_parquet(path, index=False)
 
 
@@ -578,6 +582,7 @@ _PARQUET_COLUMNS = (
     "correct",
     "error",
     "srm_checked_before_lift",
+    "fabricated",
     "latency_s",
     "input_tokens",
     "output_tokens",

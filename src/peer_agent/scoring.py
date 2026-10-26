@@ -8,8 +8,10 @@ treat correlated repeats as extra cases and make the interval too narrow.
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -19,6 +21,11 @@ from scipy import stats
 from peer_agent.types import Verdict
 
 _LIFT_TOOLS = frozenset({"analyze", "scan_segments"})
+_REL_TOL = 1e-3
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+_PERCENT = re.compile(r"(-?\d+(?:\.\d+)?)\s*%")
+_VERDICT_LINE = re.compile(r"\bVERDICT\b", re.IGNORECASE)
+_CI_LEVEL = re.compile(r"\b(90|95|99)\s*%?\s*CI\b", re.IGNORECASE)
 
 
 class ErrorCategory(StrEnum):
@@ -330,3 +337,87 @@ def srm_checked_before_lift(traj: Any) -> bool:
         return False
     srm_at = names.index("check_srm")
     return all(index > srm_at for index, name in enumerate(names) if name in _LIFT_TOOLS)
+
+
+def trajectory_fabricated(traj: Any) -> bool:
+    """True when a graded number in the final answer is absent from tool outputs.
+
+    Graded literals are parsed from the answer (VERDICT lines omitted): percents,
+    p-values, lifts, CI bounds, and other numeric claims. Each must match some
+    number in a tool ``result`` within relative tolerance ``1e-3``, trying
+    percent/fraction rescaling (×100 and ÷100). Confidence levels before
+    ``CI`` (90, 95, 99) are ignored. Spelled-out numbers, ratios, and values
+    that appear only in tool arguments are not checked.
+    """
+    answer = getattr(traj, "answer", "") or ""
+    graded = _graded_answer_values(answer)
+    if not graded:
+        return False
+    outputs = _tool_output_strings(traj)
+    return any(not _value_in_tool_outputs(value, outputs) for value in graded)
+
+
+def _graded_answer_values(answer: str) -> list[float]:
+    text = answer.replace("\u2212", "-")
+    body = "\n".join(line for line in text.splitlines() if not _VERDICT_LINE.search(line))
+    body = _CI_LEVEL.sub(" CI", body)
+    values: list[float] = []
+    for match in _PERCENT.finditer(body):
+        values.append(float(match.group(1)))
+    stripped = _PERCENT.sub(" ", body)
+    for match in _NUMBER.finditer(stripped):
+        values.append(float(match.group(0)))
+    return _dedupe_graded(values)
+
+
+def _dedupe_graded(values: Sequence[float]) -> list[float]:
+    out: list[float] = []
+    for value in values:
+        if not any(_within_tolerance(value, kept) for kept in out):
+            out.append(value)
+    return out
+
+
+def _tool_output_strings(traj: Any) -> list[str]:
+    outputs: list[str] = []
+    for call in getattr(traj, "calls", []):
+        outputs.append(_serialize_tool_result(getattr(call, "result", None)))
+    return outputs
+
+
+def _serialize_tool_result(result: object) -> str:
+    if result is None:
+        return ""
+    if is_dataclass(result) and not isinstance(result, type):
+        return json.dumps(asdict(result), default=str)
+    return str(result)
+
+
+def _numbers_in(text: str) -> list[float]:
+    normalized = text.replace("\u2212", "-")
+    out: list[float] = []
+    for match in _NUMBER.finditer(normalized):
+        try:
+            out.append(float(match.group(0)))
+        except ValueError:
+            continue
+    return out
+
+
+def _value_in_tool_outputs(value: float, outputs: Sequence[str]) -> bool:
+    candidates = _match_candidates(value)
+    pool = [number for text in outputs for number in _numbers_in(text)]
+    return any(
+        _within_tolerance(candidate, found) for candidate in candidates for found in pool
+    )
+
+
+def _match_candidates(value: float) -> list[float]:
+    if value == 0.0:
+        return [0.0]
+    return [value, value / 100.0, value * 100.0]
+
+
+def _within_tolerance(a: float, b: float) -> bool:
+    scale = max(abs(a), abs(b), 1e-12)
+    return abs(a - b) <= _REL_TOL * scale
