@@ -92,7 +92,7 @@
       "required": [
         "id", "flaw", "truth", "variant", "trial", "verdict", "correct", "error",
         "srm_checked_before_lift", "latency_s", "input_tokens", "output_tokens",
-        "cost_usd", "trajectory"
+        "usage_source", "cost_usd", "trajectory"
       ],
       "properties": {
         "id": {"type": "string"},
@@ -108,6 +108,9 @@
         "latency_s": {"type": "number"},
         "input_tokens": {"type": ["integer", "null"]},
         "output_tokens": {"type": ["integer", "null"]},
+        "usage_source": {
+          "enum": ["live", "recorded", "missing", "estimated", "mixed"]
+        },
         "cost_usd": {"type": ["number", "null"]},
         "failure_detail": {"type": ["string", "null"]},
         "trajectory": {"type": "array"}

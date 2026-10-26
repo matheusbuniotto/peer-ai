@@ -86,7 +86,15 @@ def _variant_row(variant: dict[str, Any]) -> str:
     low, high = variant["accuracy_ci"]
     n = sum(int(stats["n"]) for stats in variant["by_flaw"].values())
     cost = variant["cost_usd"]["per_case_mean"]
-    cost_cell = "—" if cost is None else f"${cost:.4f}"
+    usage_source = variant["cost_usd"].get("usage_source", "live")
+    if cost is None:
+        cost_cell = "— (missing)" if usage_source == "missing" else "—"
+    elif usage_source == "estimated":
+        cost_cell = f"${cost:.4f} (est.)"
+    elif usage_source == "recorded":
+        cost_cell = f"${cost:.4f} (recorded)"
+    else:
+        cost_cell = f"${cost:.4f}"
     p50 = variant["latency_s"]["p50"]
     return (
         f"| {variant['label']} | {_pct(variant['accuracy'])} ({_pct(low)}–{_pct(high)}) "

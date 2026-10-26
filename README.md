@@ -109,7 +109,7 @@ Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export spans over OTLP/HTTP in addition to 
 
 The numbers in the table are a live run of `openai/gpt-6-luna` with trials 3. `fixtures/recorded.jsonl` stores that run's turns, and the replay gate re-scores them.
 
-Replay rows have null tokens and a null cost. Latency is the time to replay the recorded turns and run the tools. The Luna price card applies only when a live run reports token counts.
+The committed `fixtures/recorded.jsonl` predates per-turn usage in the recording format, so replay reports `usage_source: missing` with null tokens and cost. New live `--record` runs store per-response usage (input, output, cache read, cache write); replay then reports `usage_source: recorded` and applies the Luna price card from `evals/pricing.yaml`. Latency is always the time to replay turns and run tools.
 
 The replay gate cannot see a prompt change, because the recorded answers do not change when the prompt does. That is the live gate's job.
 
