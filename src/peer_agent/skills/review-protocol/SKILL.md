@@ -26,15 +26,24 @@ secondary metric at the expense of the OEC.
      use INCONCLUSIVE (or NO_EFFECT if the primary is null and adequately powered)
      and explain the segment story. A reversal is not automatic INVALIDity unless
      SRM or optional stopping already broke trust.
-4. **Multiple looks / optional stopping.** When the data has multiple time indices
-   (`day`, `cohort_day`, or cumulative looks) and there is no pre-registered
-   sequential design, call `sequential` before treating a significant `analyze`
-   as valid. If the team peeked without a sequential plan, verdict is INVALID.
+4. **Multiple looks / optional stopping.** When a `day` or `cohort_day` column
+   exists, call `sequential` with the pre-registered `looks` and `alpha` from the
+   spec (do not pass `looks: null` when a multi-look plan was pre-registered).
+   - If `looks` is 1 but the data cover fewer calendar days than the pre-registered
+     `days`, the run stopped early without a sequential plan → INVALID (optional
+     stopping), even when `sequential` or `analyze` look significant.
+   - If `looks` > 1, a pre-registered group-sequential plan applies: trust a
+     positive primary only when `sequential` reports `reject: true` and guardrails
+     are clean; if `reject: false` on a null experiment, proceed to step 5 for
+     equivalence / INCONCLUSIVE — do not call INVALID merely because monitoring
+     was daily.
 5. **Primary metric.** Call `analyze` with the pre-registered `mde` when one was
    supplied. Pass `unit` when rows are visits, not people.
-   - Significant, durable, guardrails clean → SHIP.
+   - Significant positive lift (`p` below `alpha`), guardrails clean, and step 4
+     did not invalidate the run → SHIP (check novelty / Type M if indicated).
    - Decaying novelty → EXTEND.
-   - Not significant and `equivalent_to_null` → NO_EFFECT.
+   - Not significant and `equivalent_to_null` → NO_EFFECT (only after ruling out
+     a significant win in the previous bullet).
    - Not significant and not equivalent → INCONCLUSIVE (underpowered or no MDE).
    - Surprisingly large lift → `audit_type_m_s` (Twyman / Type M) before trusting it.
 6. State `VERDICT: <NO_EFFECT|INCONCLUSIVE|INVALID|SHIP|EXTEND>` and reasoning.

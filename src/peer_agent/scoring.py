@@ -68,16 +68,16 @@ def cluster_bootstrap_rate(  # noqa: PLR0913
     n_bootstrap: int = 4000,
     seed: int = 0,
     alpha: float = 0.05,
-) -> tuple[float, float, float]:
+) -> tuple[float, float, float, float]:
     """
-    Case-bootstrap rate and one-sided upper bound at (1 - alpha).
+    Case-bootstrap rate and two-sided percentile bounds at alpha.
 
     Resamples cases with replacement and keeps all trial rows per case, so
-    correlation within a case is preserved.
+    correlation within a case is preserved. Returns (observed, lower, upper, p).
     """
     grouped = _rows_by_case(rows, case_key)
     if not grouped:
-        return 0.0, 0.0, 1.0
+        return 0.0, 0.0, 1.0, 1.0
     cases = list(grouped.keys())
     flags = {case: [bool(predicate(row)) for row in grouped[case]] for case in cases}
 
@@ -93,10 +93,11 @@ def cluster_bootstrap_rate(  # noqa: PLR0913
             for _ in range(n_bootstrap)
         ]
     )
+    lower = float(np.percentile(boot, 100 * alpha))
     upper = float(np.percentile(boot, 100 * (1 - alpha)))
     # One-sided p: share of bootstrap draws at or above the observed rate.
     p_value = float(np.mean(boot >= observed))
-    return observed, upper, p_value
+    return observed, lower, upper, p_value
 
 
 def cluster_rate_regression(
@@ -106,15 +107,20 @@ def cluster_rate_regression(
     *,
     alpha: float = 0.05,
     seed: int = 0,
-) -> tuple[bool, float, float]:
+) -> tuple[bool, float, float, float]:
     """
-    Fail when the cluster-bootstrap upper bound exceeds the baseline rate and
-    the observed rate is above baseline (one-sided regression guard).
+    Fail when the cluster-bootstrap lower bound exceeds the baseline rate.
+
+    That is a one-sided test that the rate is meaningfully above baseline; the
+    old rule (observed > base and upper > base) fired whenever the point estimate
+    beat baseline because the upper bound almost always covers the observed rate.
     """
-    observed, upper, _ = cluster_bootstrap_rate(rows, predicate, seed=seed, alpha=alpha)
+    observed, lower, upper, _ = cluster_bootstrap_rate(
+        rows, predicate, seed=seed, alpha=alpha
+    )
     base = float(baseline_rate)
-    reject = observed > base and upper > base
-    return reject, observed, upper
+    reject = lower > base
+    return reject, observed, lower, upper
 
 
 def false_ship_row(row: dict[str, Any]) -> bool:

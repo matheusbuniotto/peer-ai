@@ -1,6 +1,6 @@
-# Peeking truth is INVALID. The planter keeps the first day d>=3 whose
-# cumulative test has p<0.05, under a true lift of 0. That p-value is an
-# optional-stopping artifact, not a treatment effect.
+# peeking-* (01-05): unplanned optional stop → INVALID.
+# peeking-* (06-10): flaw `sequential` — pre-registered daily OBF plan (`looks=days`);
+# labels come from `sequential_review_truth` (SHIP / NO_EFFECT / INCONCLUSIVE).
 cases:
 - id: srm-01
   flaw: srm
@@ -228,40 +228,40 @@ cases:
   days: 14
   truth: INVALID
 - id: peeking-06
-  flaw: peeking
-  seed: 6
+  flaw: sequential
+  seed: 4
   n: 40000
   lift: 0.0
   days: 14
-  truth: INVALID
+  truth: NO_EFFECT
 - id: peeking-07
-  flaw: peeking
-  seed: 7
-  n: 40000
-  lift: 0.0
-  days: 14
-  truth: INVALID
-- id: peeking-08
-  flaw: peeking
+  flaw: sequential
   seed: 8
   n: 40000
+  lift: 0.06
+  days: 14
+  truth: SHIP
+- id: peeking-08
+  flaw: sequential
+  seed: 2
+  n: 40000
   lift: 0.0
   days: 14
-  truth: INVALID
+  truth: INCONCLUSIVE
 - id: peeking-09
-  flaw: peeking
+  flaw: sequential
   seed: 9
   n: 40000
-  lift: 0.0
+  lift: 0.06
   days: 14
-  truth: INVALID
+  truth: SHIP
 - id: peeking-10
-  flaw: peeking
-  seed: 10
+  flaw: sequential
+  seed: 16
   n: 40000
   lift: 0.0
   days: 14
-  truth: INVALID
+  truth: NO_EFFECT
 - id: clean-01
   flaw: clean
   seed: 1

@@ -133,7 +133,7 @@ def test_false_ships_near_baseline_noise_passes_cluster_gate():
 def test_false_ships_plus_ten_points_fails_cluster_gate():
     rows = _false_ship_rows(55, 3, 0.34, seed=2)
     rate = sum(false_ship_row(r) for r in rows) / len(rows)
-    reject, _, _ = cluster_rate_regression(
+    reject, _, _, _ = cluster_rate_regression(
         rows, 0.24242424242424243, false_ship_row, seed=42
     )
     assert reject
@@ -159,6 +159,40 @@ def test_run_failure_spike_fails_the_gate():
     }
     violations = check_regression(report, baseline, mode="live")
     assert any("run_failures" in item for item in violations)
+
+
+def test_cluster_gate_false_alarm_rate_at_baseline_is_about_five_percent():
+    """With no true lift above baseline, reject should fire ~5% of the time (alpha)."""
+    base = 0.24242424242424243
+    n_cases, trials = 55, 3
+    rejects = 0
+    n_seeds = 40
+    for seed in range(n_seeds):
+        rows = _false_ship_rows(n_cases, trials, base, seed=seed)
+        reject, _, _, _ = cluster_rate_regression(rows, base, false_ship_row, seed=99)
+        rejects += int(reject)
+    rate = rejects / n_seeds
+    assert rate <= 0.12, f"false-alarm rate {rate:.2%} too high across {n_seeds} seeds"
+
+
+def test_cluster_gate_power_at_five_and_ten_point_lift():
+    base = 0.24242424242424243
+    n_cases, trials = 55, 3
+    seeds = range(30)
+
+    def power(shift: float) -> float:
+        hits = 0
+        for seed in seeds:
+            rows = _false_ship_rows(n_cases, trials, base + shift, seed=seed)
+            reject, _, _, _ = cluster_rate_regression(rows, base, false_ship_row, seed=99)
+            hits += int(reject)
+        return hits / len(seeds)
+
+    p5 = power(0.05)
+    p10 = power(0.10)
+    # Documented on PR #17 (lower-bound gate, 55x3, 30 seeds): ~37% at +5pp, ~97% at +10pp.
+    assert p5 >= 0.25, f"power at +5pp unexpectedly low: {p5:.2%}"
+    assert p10 >= 0.80, f"power at +10pp unexpectedly low: {p10:.2%}"
 
 
 def test_compare_fails_when_one_arm_takes_every_discordant_case():

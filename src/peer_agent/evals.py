@@ -42,7 +42,17 @@ from peer_agent.scoring import (
     srm_checked_before_lift,
     wilson,
 )
-from peer_agent.sim import NOVELTY, OUTLIERS, PEEKING, SIMPSON, SRM, Case, Flaw, make_case
+from peer_agent.sim import (
+    NOVELTY,
+    OUTLIERS,
+    PEEKING,
+    SIMPSON,
+    SRM,
+    Case,
+    Flaw,
+    make_case,
+    make_sequential_case,
+)
 from peer_agent.tools import Tool, analysis_tools
 from peer_agent.types import BY_USER, DesignSpec, Verdict
 
@@ -72,6 +82,10 @@ class EvalCase:
     days: int | None = None
 
     def build(self) -> Case:
+        if self.flaw == "sequential":
+            return make_sequential_case(
+                self.n, self.lift, seed=self.seed, days=self.days or 14
+            )
         flaws = [_FLAW_FNS[self.flaw]] if self.flaw in _FLAW_FNS else None
         return make_case(
             n=self.n, lift=self.lift, seed=self.seed, flaws=flaws, days=self.days
@@ -137,11 +151,16 @@ def _live_model(model: str) -> OpenAIChatModel:
 
 def _prereg_spec(ec: EvalCase) -> DesignSpec:
     """Same pre-registration for every case — analysis defaults, not a flaw hint."""
+    days = ec.days or 14
+    # 5% MDE: below the 6% planted lifts on clean-06..10 so real wins stay SHIP,
+    # while null clean cases can still reach NO_EFFECT when powered.
+    looks = days if ec.flaw == "sequential" else 1
     return DesignSpec(
         baseline=0.12,
-        mde=0.08,
+        mde=0.05,
         power=0.8,
-        days=14,
+        days=days,
+        looks=looks,
         n_per_arm=max(ec.n // 2, 1_000),
         unit=BY_USER,
         metric="converted",
@@ -149,12 +168,12 @@ def _prereg_spec(ec: EvalCase) -> DesignSpec:
 
 
 def _review_question(case: Case) -> str:
-    stopped = case.df.attrs.get("stopped_day")
-    if stopped is None:
-        base = "Review this experiment."
-    else:
-        day = int(stopped)
-        base = f"Review this experiment. The team checked daily and stopped on day {day}."
+    base = "Review this experiment."
+    if "day" in case.df.columns:
+        base = (
+            f"{base} Rows include a `day` column for cumulative exposure "
+            f"(0 through {int(case.df.day.max())})."
+        )
     return f"{base}\n\n{ROWS_ARE_LOADED}"
 
 
@@ -820,7 +839,7 @@ def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
     Live regression gate (tools variant, all trials, case-clustered):
 
     - Accuracy: Wilson upper bound on trial-0 accuracy vs baseline point.
-    - False ships / run failures: case-bootstrap upper bound vs baseline rate.
+    - False ships / run failures: case-bootstrap lower bound vs baseline rate.
       Crashes and format failures count as regressions — the gate must not
       reward a broken harness for fewer false ships.
     """
@@ -832,22 +851,22 @@ def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
         )
     variant = baseline.get("primary_variant") or _tools_label(report.cases)
     rows = [row for row in report.cases if variant is None or row.get("variant") == variant]
-    ship_reject, ship_rate, ship_upper = cluster_rate_regression(
+    ship_reject, ship_rate, ship_lower, _ship_upper = cluster_rate_regression(
         rows, float(baseline["false_ships"]), false_ship_row, seed=42
     )
     if ship_reject:
         base = float(baseline["false_ships"])
         violations.append(
-            f"false_ships {ship_rate:.3f} (bootstrap upper {ship_upper:.3f}) "
+            f"false_ships {ship_rate:.3f} (bootstrap lower {ship_lower:.3f}) "
             f"> baseline {base:.3f}"
         )
     failure_base = float(baseline.get("run_failure_rate", 0.048484848484848485))
-    fail_reject, fail_rate, fail_upper = cluster_rate_regression(
+    fail_reject, fail_rate, fail_lower, _fail_upper = cluster_rate_regression(
         rows, failure_base, run_failure_row, seed=43
     )
     if fail_reject:
         violations.append(
-            f"run_failures {fail_rate:.3f} (bootstrap upper {fail_upper:.3f}) "
+            f"run_failures {fail_rate:.3f} (bootstrap lower {fail_lower:.3f}) "
             f"> baseline {failure_base:.3f}"
         )
     if violations:

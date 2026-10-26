@@ -60,6 +60,18 @@ ROWS_ARE_LOADED = (
 )
 
 
+def _skill_markdown(path: Path) -> str:
+    text = path.read_text()
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            return text[end + 3 :].lstrip()
+    return text
+
+
+_REVIEW_PROTOCOL_BODY = _skill_markdown(_SKILLS_DIR / "review-protocol" / "SKILL.md")
+
+
 def _files_capability() -> FileSystem:
     """
     Lets the model write its own review/design write-up to disk when asked
@@ -440,11 +452,18 @@ class Agent:
     def _model(self, adapter: Any) -> Any:
         return self.llm if isinstance(self.llm, Model) else FunctionModel(adapter)
 
-    def _capabilities(self, *, files: bool) -> list[Any]:
-        caps: list[Any] = [Skills(_SKILLS_DIR, include=["review-protocol"])]
+    def _capabilities(self, *, files: bool, skills: bool) -> list[Any]:
+        caps: list[Any] = []
+        if skills:
+            caps.append(Skills(_SKILLS_DIR, include=["review-protocol"]))
         if files:
             caps.append(_files_capability())
         return caps
+
+    def _review_system_prompt(self) -> str:
+        if self.tools:
+            return _PROMPT
+        return f"{_PROMPT}\n\n{_REVIEW_PROTOCOL_BODY}"
 
     def chat_agent(self, df: Any) -> PydanticAgent:
         """
@@ -455,8 +474,10 @@ class Agent:
         return PydanticAgent(
             self.llm,
             tools=pai_tools,
-            system_prompt=_PROMPT,
-            capabilities=self._capabilities(files=bool(self.tools)),
+            system_prompt=self._review_system_prompt(),
+            capabilities=self._capabilities(
+                files=bool(self.tools), skills=bool(self.tools)
+            ),
         )
 
     def review(
@@ -486,8 +507,10 @@ class Agent:
         pai_agent = PydanticAgent(
             self._model(adapter),
             tools=pai_tools,
-            system_prompt=_PROMPT,
-            capabilities=self._capabilities(files=bool(self.tools)),
+            system_prompt=self._review_system_prompt(),
+            capabilities=self._capabilities(
+                files=bool(self.tools), skills=bool(self.tools)
+            ),
         )
         pai_agent.output_validator(_cite_the_toolbox(calls))
         started = time.perf_counter()
