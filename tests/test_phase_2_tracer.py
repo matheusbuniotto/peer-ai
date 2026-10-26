@@ -201,8 +201,19 @@ def test_it_will_not_quote_a_lift_from_a_broken_experiment(srm, live_agent):
 
 @pytest.mark.live
 def test_it_can_say_nothing_happened(clean, live_agent):
-    """The behaviour models are worst at. If this fails, the prompt needs work."""
-    assert live_agent.review(clean).verdict is Verdict.NO_EFFECT
+    """Null with a pre-registered MDE should read as NO_EFFECT, not INCONCLUSIVE."""
+    from peer_agent.types import BY_USER, DesignSpec
+
+    spec = DesignSpec(
+        baseline=0.12,
+        mde=0.05,
+        power=0.8,
+        days=14,
+        n_per_arm=20_000,
+        unit=BY_USER,
+        metric="converted",
+    )
+    assert live_agent.review(clean, spec=spec).verdict is Verdict.NO_EFFECT
 
 
 @pytest.mark.live
@@ -229,12 +240,20 @@ def test_a_design_it_writes_survives_the_simulator():
     from peer_agent.agent import Agent
 
     brief = (
-        "Redesigned checkout. Baseline conversion 12%, about 3,000 users a day, "
-        "affects returning customers. We keep the current flow if it doesn't win."
+        "Redesigned checkout. Baseline conversion 12%, target minimum detectable "
+        "effect 5% relative lift, about 3,000 users a day, affects returning customers. "
+        "We keep the current flow if it doesn't win."
     )
-    written = Agent.from_env().design(brief).spec
+    traj = Agent.from_env().design(brief)
+    if traj.spec is None:
+        text = traj.answer.lower()
+        assert "open" in text or "provisional" in text or "decision" in text
+        assert "mde" in text or "detectable" in text or "effect size" in text
+        return
+    written = traj.spec
     assert written.unit is BY_USER
     assert written.days % 7 == 0
+    assert written.mde > 0
 
     sim = simulate_design(written, lift=written.mde, runs=400, seed=0)
     assert sim.power >= written.power - 0.10

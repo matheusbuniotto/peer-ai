@@ -26,13 +26,15 @@ import numpy as np
 import pandas as pd
 import yaml
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
 from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
+    false_ship_rate,
+    false_ship_regression,
+    format_fail_detail,
     mcnemar,
     pass_at_k,
     pass_hat_k,
@@ -41,7 +43,7 @@ from peer_agent.scoring import (
 )
 from peer_agent.sim import NOVELTY, OUTLIERS, PEEKING, SIMPSON, SRM, Case, Flaw, make_case
 from peer_agent.tools import Tool, analysis_tools
-from peer_agent.types import Verdict
+from peer_agent.types import BY_USER, DesignSpec, Verdict
 
 _SUITE_PATH = Path("evals/suite.yaml")
 _PRICES_PATH = Path("evals/pricing.yaml")
@@ -125,9 +127,29 @@ def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], list[Any]]:
 
 
 def _live_model(model: str) -> OpenAIChatModel:
+    from peer_agent.agent import openai_provider
+
     base_url = os.environ["LLM_BASE_URL"]
-    provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+    provider = openai_provider(base_url, os.environ["LLM_API_KEY"])
     return OpenAIChatModel(model, provider=provider, settings=chat_settings(base_url))
+
+
+def _prereg_spec(ec: EvalCase) -> DesignSpec | None:
+    """
+    Pre-registered MDE for null cases: without it, `analyze` cannot return
+    `equivalent_to_null`, and NO_EFFECT is not a fair expected verdict.
+    """
+    if ec.flaw != "clean":
+        return None
+    return DesignSpec(
+        baseline=0.12,
+        mde=0.05,
+        power=0.8,
+        days=14,
+        n_per_arm=max(ec.n // 2, 1_000),
+        unit=BY_USER,
+        metric="converted",
+    )
 
 
 def _review_question(case: Case) -> str:
@@ -192,6 +214,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
 ) -> dict[str, Any]:
     error = classify_error(ec, traj)
     input_tokens, output_tokens = _usage_tokens(traj, mode)
+    failure_detail = format_fail_detail(traj) if error is not None else None
     row: dict[str, Any] = {
         "id": ec.id,
         "flaw": ec.flaw,
@@ -202,6 +225,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
         "verdict": traj.verdict.name if traj.verdict else None,
         "correct": error is None,
         "error": None if error is None else error.value,
+        "failure_detail": failure_detail,
         "srm_checked_before_lift": srm_checked_before_lift(traj),
         "latency_s": traj.latency_s,
         "input_tokens": input_tokens,
@@ -242,7 +266,9 @@ def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
             "eval.case", case_id=ec.id, flaw=ec.flaw, trial=ctx.trial, variant=ctx.label
         ) as span:
             traj = Agent(llm, tools=ctx.tools).review(
-                built, question=_review_question(built)
+                built,
+                spec=_prereg_spec(ec),
+                question=_review_question(built),
             )  # noqa: E501
             row = _case_row(
                 ec,
@@ -351,10 +377,13 @@ def _summarize(  # noqa: PLR0913, PLR0917
     trial0 = [row for row in rows if row["trial"] == 0]
     hits = sum(bool(row["correct"]) for row in trial0)
     latency = np.asarray([row["latency_s"] for row in rows], dtype=float)
-    tokens_in = _mean([row["input_tokens"] for row in rows])
-    tokens_out = _mean([row["output_tokens"] for row in rows])
-    costs = [row["cost_usd"] for row in rows]
-    total = None if any(cost is None for cost in costs) else float(sum(costs))
+    tokens_in = [row["input_tokens"] for row in rows if row["input_tokens"] is not None]
+    tokens_out = [row["output_tokens"] for row in rows if row["output_tokens"] is not None]
+    costs = [row["cost_usd"] for row in rows if row["cost_usd"] is not None]
+    missing_usage = sum(
+        1 for row in rows if row["input_tokens"] is None or row["output_tokens"] is None
+    )
+    total_cost = float(sum(costs)) if costs else None
     matrix = _matrix(rows, case_ids, trials)
     return {
         "label": label,
@@ -375,16 +404,18 @@ def _summarize(  # noqa: PLR0913, PLR0917
             )  # noqa: E501
         },
         "cost_usd": {
-            "total": total,
-            "per_case_mean": None if total is None else total / len(rows),
+            "total": total_cost,
+            "per_case_mean": None if not costs else total_cost / len(costs),
+            "missing_rows": missing_usage,
         },  # noqa: E501
         "latency_s": {
             "p50": float(np.percentile(latency, 50)),
             "p95": float(np.percentile(latency, 95)),
         },  # noqa: E501
         "tokens": {
-            "input": None if tokens_in is None else int(round(tokens_in * len(rows))),
-            "output": None if tokens_out is None else int(round(tokens_out * len(rows))),
+            "input": int(sum(tokens_in)) if tokens_in else None,
+            "output": int(sum(tokens_out)) if tokens_out else None,
+            "missing_rows": missing_usage,
         },
     }
 
@@ -508,6 +539,7 @@ _PARQUET_COLUMNS = (
     "input_tokens",
     "output_tokens",
     "cost_usd",
+    "failure_detail",
 )
 
 
@@ -788,17 +820,36 @@ def _replay_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
 
 
 def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
+    """
+    Live regression gate (trial 0, tools variant):
+
+    - Accuracy: Wilson upper bound must not sit below the baseline point (same as
+      before — conservative on overall correctness).
+    - False ships: one-sided binomial test at alpha=0.05 — fail only when the
+      observed false-ship count is significantly above the baseline rate, not
+      when a single noisy run lands a few points higher by chance.
+    """
     violations = []
     high = float(report.accuracy_ci[1])
     if high < float(baseline["accuracy"]):
         violations.append(
             f"accuracy CI high {high:.3f} < baseline {float(baseline['accuracy']):.3f}"
         )
-    limit = float(baseline["false_ships"]) + 0.02
-    if report.false_ships > limit:
+    variant = baseline.get("primary_variant") or _tools_label(report.cases)
+    rows = [
+        row
+        for row in report.cases
+        if row.get("trial") == 0 and (variant is None or row.get("variant") == variant)
+    ]
+    k, n = false_ship_rate(rows, trial=0)
+    reject, p_value = false_ship_regression(k, n, float(baseline["false_ships"]))
+    if reject:
+        rate = k / n if n else 0.0
+        base = float(baseline["false_ships"])
         violations.append(
-            f"false_ships {report.false_ships:.3f} > baseline + 0.02 ({limit:.3f})"
-        )  # noqa: E501
+            f"false_ships {rate:.3f} ({k}/{n}) > baseline {base:.3f} "
+            f"(one-sided binomial p={p_value:.4g})"
+        )
     if violations:
         violations.extend(_paired_note(report, baseline))
     return violations

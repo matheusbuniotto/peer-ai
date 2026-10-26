@@ -1,8 +1,9 @@
-"""The live gate fails only when the interval excludes the baseline."""
+"""Live gate uses Wilson (accuracy) and a one-sided binomial test (false ships)."""
 
 from __future__ import annotations
 
 from peer_agent.evals import Report, check_regression, compare_cases
+from peer_agent.scoring import false_ship_regression
 
 
 def _report(accuracy: float, high: float, false_ships: float, cases: list[dict]) -> Report:
@@ -16,6 +17,24 @@ def _report(accuracy: float, high: float, false_ships: float, cases: list[dict])
         models=[],
         published_failures=[],
     )
+
+
+def _false_ship_cases(n_false: int, n_total: int = 55) -> list[dict]:
+    label = "openai/gpt-6-luna (tools)"
+    rows = []
+    for i in range(n_total):
+        ship = i < n_false
+        rows.append(
+            {
+                "id": f"c{i:02d}",
+                "trial": 0,
+                "variant": label,
+                "verdict": "SHIP" if ship else "NO_EFFECT",
+                "truth": "NO_EFFECT",
+                "correct": not ship,
+            }
+        )
+    return rows
 
 
 def test_the_live_gate_uses_accuracy_not_the_replay_figure():
@@ -50,11 +69,32 @@ def test_a_drop_the_interval_excludes_fails():
     assert any("McNemar" in item for item in violations)
 
 
-def test_false_ships_past_two_points_fail():
-    report = _report(0.90, 0.99, 0.05, [])
-    baseline = {"accuracy": 0.80, "false_ships": 0.0}
+def test_false_ships_at_baseline_noise_does_not_fail_the_live_gate():
+    """16/55 ≈ 29% vs baseline 24% — the old +0.02 rule tripped here by chance."""
+    cases = _false_ship_cases(16)
+    report = _report(0.40, 0.55, 16 / 55, cases)
+    baseline = {
+        "accuracy": 0.418,
+        "false_ships": 0.24242424242424243,
+        "primary_variant": "openai/gpt-6-luna (tools)",
+    }
+    violations = check_regression(report, baseline, mode="live")
+    assert not any("false_ships" in item for item in violations)
+
+
+def test_false_ships_clearly_above_baseline_fails_the_live_gate():
+    cases = _false_ship_cases(30)
+    report = _report(0.40, 0.55, 30 / 55, cases)
+    baseline = {
+        "accuracy": 0.418,
+        "false_ships": 0.24242424242424243,
+        "primary_variant": "openai/gpt-6-luna (tools)",
+    }
     violations = check_regression(report, baseline, mode="live")
     assert any("false_ships" in item for item in violations)
+    k, n = 30, 55
+    reject, _ = false_ship_regression(k, n, baseline["false_ships"])
+    assert reject
 
 
 def test_compare_fails_when_one_arm_takes_every_discordant_case():

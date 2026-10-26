@@ -65,6 +65,7 @@ def analysis_tools(sandbox: object | None = None) -> list[Tool]:
         _from_function(stats.scan_segments, bind_df=True),
         _from_function(stats.check_novelty, bind_df=True),
         _from_function(stats.check_guardrails, bind_df=True),
+        _from_function(stats.check_covariate_health, bind_df=True),
         _from_function(stats.bootstrap_analyze, bind_df=True),
         _from_function(stats.bayesian_analyze, bind_df=True),
         _from_function(stats.audit_type_m_s, bind_df=True),

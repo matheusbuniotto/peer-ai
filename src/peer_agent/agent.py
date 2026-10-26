@@ -74,6 +74,18 @@ class OverBudget(Exception):
     pass
 
 
+def request_timeout_s() -> float:
+    """Wall-clock limit for one model request (HTTP layer). Default three minutes."""
+    return float(os.environ.get("PEER_REQUEST_TIMEOUT_S", "180"))
+
+
+def openai_provider(base_url: str, api_key: str) -> OpenAIProvider:
+    import httpx
+
+    client = httpx.AsyncClient(timeout=httpx.Timeout(request_timeout_s()))
+    return OpenAIProvider(base_url=base_url, api_key=api_key, http_client=client)
+
+
 def chat_settings(base_url: str) -> OpenAIChatModelSettings:
     """Leave OpenAI's `store` field off the request when the host is OpenRouter.
 
@@ -127,6 +139,25 @@ def json_default(obj: Any) -> Any:
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return dataclasses.asdict(obj)
     return str(obj)
+
+
+def _failed_trajectory(
+    kind: str,
+    calls: list[ToolCall],
+    *,
+    started: float,
+    exc: Exception,
+    spec: DesignSpec | None = None,
+) -> Trajectory:
+    traj = Trajectory(
+        calls=calls,
+        done=False,
+        error=f"{type(exc).__name__}: {exc}",
+        spec=spec,
+        latency_s=time.perf_counter() - started,
+    )
+    _log_trajectory(kind, traj)
+    return traj
 
 
 def _log_trajectory(kind: str, traj: Trajectory, *, case_id: str | None = None) -> None:
@@ -257,6 +288,16 @@ def _cite_the_toolbox(calls: list[ToolCall]) -> Callable[[str], str]:
     return validate
 
 
+def _verdict_error(answer: str, verdict: Verdict | None) -> str | None:
+    if verdict is not None:
+        return None
+    return (
+        "empty_model_response"
+        if not str(answer).strip()
+        else "missing_or_invalid_verdict_line"
+    )
+
+
 def _redact(answer: str, invented: tuple[str, ...]) -> str:
     """Last resort, once the model has had its chance: strike the figures out
     rather than hand a reader a number nothing stands behind."""
@@ -375,7 +416,7 @@ class Agent:
         if missing:
             raise RuntimeError(f"{', '.join(missing)} not set — see .env.example")
         base_url = os.environ["LLM_BASE_URL"]
-        provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+        provider = openai_provider(base_url, os.environ["LLM_API_KEY"])
         model = OpenAIChatModel(
             os.environ["LLM_MODEL"], provider=provider, settings=chat_settings(base_url)
         )
@@ -442,6 +483,8 @@ class Agent:
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        except Exception as exc:
+            return _failed_trajectory("review", calls, spec=spec, started=started, exc=exc)
         latency_s = time.perf_counter() - started
 
         answer = result.output
@@ -464,6 +507,7 @@ class Agent:
             spec=spec,
             usage=_read_usage(result),
             latency_s=latency_s,
+            error=_verdict_error(answer, verdict),
         )
         _log_trajectory("review", traj)
         return traj
@@ -497,6 +541,8 @@ class Agent:
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        except Exception as exc:
+            return _failed_trajectory("design", calls, started=started, exc=exc)
         latency_s = time.perf_counter() - started
         usage = _read_usage(result)
 

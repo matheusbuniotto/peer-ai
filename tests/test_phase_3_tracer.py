@@ -96,6 +96,7 @@ def test_the_registry_is_complete(sandbox):
         "scan_segments",
         "check_novelty",
         "check_guardrails",
+        "check_covariate_health",
         "bootstrap_analyze",
         "bayesian_analyze",
         "audit_type_m_s",

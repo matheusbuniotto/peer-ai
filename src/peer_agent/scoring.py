@@ -40,6 +40,36 @@ class McNemarResult:
     method: Literal["exact", "chi2_cc"]
 
 
+def false_ship_rate(rows: Sequence[dict[str, Any]], *, trial: int = 0) -> tuple[int, int]:
+    """Count false ships among rows for one trial (verdict SHIP, truth not SHIP)."""
+    subset = [row for row in rows if int(row["trial"]) == trial]
+    if not subset:
+        return 0, 0
+    k = sum(
+        1 for row in subset if row.get("verdict") == "SHIP" and row.get("truth") != "SHIP"
+    )
+    return k, len(subset)
+
+
+def false_ship_regression(
+    k: int, n: int, baseline_rate: float, alpha: float = 0.05
+) -> tuple[bool, float]:
+    """
+    One-sided binomial test: is the false-ship count above the baseline rate?
+
+    Returns (reject, p_value). `reject` is True when the gate should fail — the
+    observed false-ship rate is significantly higher than the baseline at `alpha`.
+    """
+    if n <= 0:
+        return False, 1.0
+    p0 = min(max(float(baseline_rate), 0.0), 1.0)
+    if k == 0:
+        return False, 1.0
+    result = stats.binomtest(k, n, p0, alternative="greater")
+    p_value = float(result.pvalue)
+    return p_value < alpha, p_value
+
+
 def wilson(successes: int, n: int, conf: float = 0.95) -> tuple[float, float]:
     """Wilson score interval for a binomial proportion. Returns (low, high)."""
     if n <= 0 or not 0 <= successes <= n:
@@ -154,6 +184,17 @@ def classify_error(case: Any, traj: Any) -> ErrorCategory | None:
     if traj.verdict is case.truth:
         return None
     return _wrong_verdict(case, traj)
+
+
+def format_fail_detail(traj: Any) -> str:
+    """Human-readable reason a trajectory failed to produce a scored verdict."""
+    detail = getattr(traj, "error", None)
+    if detail:
+        return str(detail)
+    answer = getattr(traj, "answer", "") or ""
+    if not str(answer).strip():
+        return "empty_model_response"
+    return "missing_or_invalid_verdict_line"
 
 
 def _run_failure(traj: Any) -> ErrorCategory | None:
