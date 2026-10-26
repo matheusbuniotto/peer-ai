@@ -27,6 +27,9 @@ def test_a_replay_validates_and_does_not_invent_a_cost(tmp_path):
         assert case["cost_usd"] is None
         assert case["latency_s"] >= 0
     for variant in payload["variants"]:
+        if variant.get("pending"):
+            assert variant["accuracy"] is None
+            continue
         assert variant["tokens"]["input"] is None
         assert variant["tokens"]["missing_rows"] == len(
             [row for row in payload["cases"] if row["variant"] == variant["label"]]

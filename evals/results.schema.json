@@ -50,6 +50,12 @@
   },
   "$defs": {
     "variant": {
+      "oneOf": [
+        {"$ref": "#/$defs/scored_variant"},
+        {"$ref": "#/$defs/pending_variant"}
+      ]
+    },
+    "scored_variant": {
       "type": "object",
       "required": [
         "label", "model", "tools", "accuracy", "accuracy_ci", "accuracy_by_trial",
@@ -75,7 +81,37 @@
         "tokens": {"type": "object"}
       }
     },
+    "pending_variant": {
+      "type": "object",
+      "required": ["label", "model", "tools", "pending", "pending_reason"],
+      "properties": {
+        "label": {"type": "string"},
+        "model": {"type": "string"},
+        "tools": {"type": "boolean"},
+        "pending": {"const": true},
+        "pending_reason": {"type": "string"},
+        "accuracy": {"type": "null"},
+        "accuracy_ci": {"type": "null"},
+        "accuracy_by_trial": {"type": "array"},
+        "pass_at_k": {"type": "null"},
+        "pass_hat_k": {"type": "null"},
+        "false_ships": {"type": "null"},
+        "false_blocks": {"type": "null"},
+        "by_flaw": {"type": "object"},
+        "errors": {"type": "object"},
+        "process": {"type": "object"},
+        "cost_usd": {"type": "object"},
+        "latency_s": {"type": "object"},
+        "tokens": {"type": "object"}
+      }
+    },
     "comparison": {
+      "oneOf": [
+        {"$ref": "#/$defs/scored_comparison"},
+        {"$ref": "#/$defs/pending_comparison"}
+      ]
+    },
+    "scored_comparison": {
       "type": "object",
       "required": ["a", "b", "b_only_a_right", "c_only_b_right", "p_value", "method"],
       "properties": {
@@ -85,6 +121,15 @@
         "c_only_b_right": {"type": "integer"},
         "p_value": {"type": "number"},
         "method": {"enum": ["exact", "chi2_cc"]}
+      }
+    },
+    "pending_comparison": {
+      "type": "object",
+      "required": ["a", "b", "pending"],
+      "properties": {
+        "a": {"type": "string"},
+        "b": {"type": "string"},
+        "pending": {"const": true}
       }
     },
     "case": {
