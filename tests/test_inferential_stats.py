@@ -54,7 +54,8 @@ def test_bayesian_posterior_means_match_beta_moments():
     result = stats.bayesian_analyze(df, n_samples=500_000, seed=3)
     assert abs(result.control_rate - p_c) < 1e-12
     assert abs(result.treatment_rate - p_t) < 1e-12
-    assert abs(result.expected_rel_lift - (post_t.mean() - post_c.mean()) / post_c.mean()) < 0.01
+    analytic_rel = (post_t.mean() - post_c.mean()) / post_c.mean()
+    assert abs(result.expected_rel_lift - analytic_rel) < 0.01
 
 
 @pytest.mark.parametrize(
