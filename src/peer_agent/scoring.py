@@ -395,7 +395,11 @@ def _decimal_places(token: str) -> int:
 def _dedupe_literals(literals: Sequence[_GradedLiteral]) -> list[_GradedLiteral]:
     out: list[_GradedLiteral] = []
     for item in literals:
-        if not any(_graded_matches_found(item.value, kept.value, min(item.decimals, kept.decimals)) for kept in out):
+        duplicate = any(
+            _graded_matches_found(item.value, kept.value, min(item.decimals, kept.decimals))
+            for kept in out
+        )
+        if not duplicate:
             out.append(item)
     return out
 
@@ -431,7 +435,9 @@ def _numbers_in(text: str) -> list[float]:
 
 def _literal_in_evidence(literal: _GradedLiteral, evidence: Sequence[str]) -> bool:
     pool = [number for text in evidence for number in _numbers_in(text)]
-    return any(_graded_matches_found(literal.value, found, literal.decimals) for found in pool)
+    return any(
+        _graded_matches_found(literal.value, found, literal.decimals) for found in pool
+    )
 
 
 def _scale_variants(value: float) -> list[float]:
