@@ -126,7 +126,15 @@ def test_every_case_in_the_suite_has_a_known_answer():
 def test_the_suite_covers_all_five_flaws():
     """A grade averaged over four categories isn't the grade I publish."""
     flaws = {case.flaw for case in load_suite()}
-    assert flaws == {"srm", "novelty", "simpson", "peeking", "clean", "outliers"}
+    assert flaws == {
+        "srm",
+        "novelty",
+        "simpson",
+        "peeking",
+        "sequential",
+        "clean",
+        "outliers",
+    }
 
 
 def _stable(report):

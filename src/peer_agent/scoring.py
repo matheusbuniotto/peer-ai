@@ -111,9 +111,10 @@ def cluster_rate_regression(
     """
     Fail when the cluster-bootstrap lower bound exceeds the baseline rate.
 
-    That is a one-sided test that the rate is meaningfully above baseline; the
-    old rule (observed > base and upper > base) fired whenever the point estimate
-    beat baseline because the upper bound almost always covers the observed rate.
+    False-alarm and power depend on how errors cluster across cases. With
+    i.i.d. per-cell rates the gate is liberal; Luna's baseline clusters false
+    ships in ~20 cases — use ``tests/test_gates.py`` clustered fixtures for
+    realistic figures.
     """
     observed, lower, upper, _ = cluster_bootstrap_rate(
         rows, predicate, seed=seed, alpha=alpha

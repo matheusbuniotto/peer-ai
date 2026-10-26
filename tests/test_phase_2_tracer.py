@@ -206,7 +206,7 @@ def test_it_can_say_nothing_happened(clean, live_agent):
 
     spec = DesignSpec(
         baseline=0.12,
-        mde=0.08,
+        mde=0.05,
         power=0.8,
         days=14,
         n_per_arm=20_000,

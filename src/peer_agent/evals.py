@@ -168,13 +168,7 @@ def _prereg_spec(ec: EvalCase) -> DesignSpec:
 
 
 def _review_question(case: Case) -> str:
-    base = "Review this experiment."
-    if "day" in case.df.columns:
-        base = (
-            f"{base} Rows include a `day` column for cumulative exposure "
-            f"(0 through {int(case.df.day.max())})."
-        )
-    return f"{base}\n\n{ROWS_ARE_LOADED}"
+    return f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:

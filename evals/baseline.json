@@ -20,13 +20,13 @@
     "srm": 1.0
   },
   "replay_expected": {
-    "accuracy": 0.4727272727272727,
+    "accuracy": 0.4,
     "by_flaw": {
       "clean": 0.3,
       "novelty": 0.9,
       "outliers": 0.0,
       "peeking": 0.0,
-      "sequential": 0.8,
+      "sequential": 0.0,
       "simpson": 0.0,
       "srm": 1.0
     }

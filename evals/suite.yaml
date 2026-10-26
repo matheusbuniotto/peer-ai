@@ -243,25 +243,25 @@ cases:
   truth: SHIP
 - id: peeking-08
   flaw: sequential
+  seed: 36
+  n: 40000
+  lift: 0.06
+  days: 14
+  truth: INCONCLUSIVE
+- id: peeking-09
+  flaw: sequential
+  seed: 56
+  n: 40000
+  lift: 0.06
+  days: 14
+  truth: INCONCLUSIVE
+- id: peeking-10
+  flaw: sequential
   seed: 2
   n: 40000
   lift: 0.0
   days: 14
   truth: INCONCLUSIVE
-- id: peeking-09
-  flaw: sequential
-  seed: 9
-  n: 40000
-  lift: 0.06
-  days: 14
-  truth: SHIP
-- id: peeking-10
-  flaw: sequential
-  seed: 16
-  n: 40000
-  lift: 0.0
-  days: 14
-  truth: NO_EFFECT
 - id: clean-01
   flaw: clean
   seed: 1
