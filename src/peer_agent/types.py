@@ -158,6 +158,15 @@ class GuardrailResult:
 
 
 @dataclass(frozen=True)
+class CovariateHealthResult:
+    column: str
+    max_to_median: float
+    suspicious: bool
+    cuped_unsafe: bool
+    n_extreme: int
+
+
+@dataclass(frozen=True)
 class BootstrapResult:
     p_value: float
     lift: float

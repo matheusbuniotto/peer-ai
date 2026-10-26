@@ -11,10 +11,12 @@ from scipy import stats as sps
 from tea_tasting.metrics.mean import MeanResult
 from tea_tasting.metrics.proportion import SampleRatioResult
 
+from peer_agent.stats_columns import require_columns
 from peer_agent.types import (
     AnalyzeResult,
     BayesianResult,
     BootstrapResult,
+    CovariateHealthResult,
     Guardrail,
     GuardrailResult,
     GuardrailStatus,
@@ -66,6 +68,7 @@ def check_srm(  # noqa: PLR0913 (each argument is one pre-registered choice)
     overall while tilting inside a segment is how Simpson's paradox arrives, and
     the global check is blind to it by construction.
     """
+    require_columns(df, by, tool="check_srm")
     overall = _split_p_value(df, ratio, control)
     per_stratum = [
         (f"{column}={level}", _split_p_value(part, ratio, control))
@@ -388,8 +391,7 @@ def scan_segments(
     80% of null datasets. Cochran's Q asks the real question — does one effect
     explain every segment? — in a single test instead of by eyeballing a scan.
     """
-    if "segment" not in df.columns:
-        raise ValueError("scan_segments needs a 'segment' column")
+    require_columns(df, ("segment",), tool="scan_segments")
     overall = analyze(df, control=control, alpha=alpha)
     parts = {
         str(segment): analyze(subset, control=control, alpha=alpha)
@@ -447,8 +449,7 @@ def check_novelty(
     days since a user's first exposure rather than on the calendar.
     """
     column = "cohort_day" if "cohort_day" in df.columns else "day"
-    if column not in df.columns:
-        raise ValueError("check_novelty needs a 'day' or 'cohort_day' column")
+    require_columns(df, (column,), tool="check_novelty")
 
     daily = [
         (_day_index(day), analyze(part, control=control, alpha=alpha))
@@ -570,6 +571,46 @@ def _one_sided_bounds(
     return (
         side("greater").rel_effect_size_ci_lower,
         side("less").rel_effect_size_ci_upper,
+    )
+
+
+def check_covariate_health(
+    df: pd.DataFrame,
+    column: str = "pre_period_metric",
+    *,
+    max_ratio: float = 20.0,
+) -> CovariateHealthResult:
+    """
+    Screen a CUPED covariate for extreme values that can dominate variance reduction.
+
+    A handful of inflated covariate rows (Twyman's-law scale surprises) make CUPED
+    untrustworthy even when the primary conversion test looks significant.
+    """
+    if column not in df.columns:
+        raise ValueError(f"check_covariate_health needs a '{column}' column")
+    values = df[column].astype(float)
+    positive = values[values > 0]
+    if positive.empty:
+        median = float(values.median())
+        return CovariateHealthResult(
+            column=column,
+            max_to_median=float("nan"),
+            suspicious=False,
+            cuped_unsafe=True,
+            n_extreme=0,
+        )
+    median = float(positive.median())
+    max_val = float(positive.max())
+    ratio = max_val / median if median > 0 else float("inf")
+    threshold = median * max_ratio
+    n_extreme = int((values > threshold).sum())
+    suspicious = ratio > max_ratio or n_extreme > 0
+    return CovariateHealthResult(
+        column=column,
+        max_to_median=float(ratio),
+        suspicious=suspicious,
+        cuped_unsafe=suspicious,
+        n_extreme=n_extreme,
     )
 
 

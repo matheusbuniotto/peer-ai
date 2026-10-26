@@ -8,7 +8,7 @@ treat correlated repeats as extra cases and make the interval too narrow.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
@@ -38,6 +38,120 @@ class McNemarResult:
     c: int  # A wrong, B right
     p_value: float
     method: Literal["exact", "chi2_cc"]
+
+
+def false_ship_rate(rows: Sequence[dict[str, Any]], *, trial: int = 0) -> tuple[int, int]:
+    """Count false ships among rows for one trial (verdict SHIP, truth not SHIP)."""
+    subset = [row for row in rows if int(row["trial"]) == trial]
+    if not subset:
+        return 0, 0
+    k = sum(
+        1 for row in subset if row.get("verdict") == "SHIP" and row.get("truth") != "SHIP"
+    )
+    return k, len(subset)
+
+
+def _rows_by_case(
+    rows: Sequence[dict[str, Any]], case_key: str = "id"
+) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(str(row[case_key]), []).append(row)
+    return grouped
+
+
+def cluster_bootstrap_rate(  # noqa: PLR0913
+    rows: Sequence[dict[str, Any]],
+    predicate: Callable[[dict[str, Any]], bool],
+    *,
+    case_key: str = "id",
+    n_bootstrap: int = 4000,
+    seed: int = 0,
+    alpha: float = 0.05,
+) -> tuple[float, float, float, float]:
+    """
+    Case-bootstrap rate and two-sided percentile bounds at alpha.
+
+    Resamples cases with replacement and keeps all trial rows per case, so
+    correlation within a case is preserved. Returns (observed, lower, upper, p).
+    """
+    grouped = _rows_by_case(rows, case_key)
+    if not grouped:
+        return 0.0, 0.0, 1.0, 1.0
+    cases = list(grouped.keys())
+    flags = {case: [bool(predicate(row)) for row in grouped[case]] for case in cases}
+
+    def rate(case_list: list[str]) -> float:
+        flat = [flag for case in case_list for flag in flags[case]]
+        return sum(flat) / len(flat) if flat else 0.0
+
+    observed = rate(cases)
+    rng = np.random.default_rng(seed)
+    boot = np.array(
+        [
+            rate(list(rng.choice(cases, size=len(cases), replace=True)))
+            for _ in range(n_bootstrap)
+        ]
+    )
+    lower = float(np.percentile(boot, 100 * alpha))
+    upper = float(np.percentile(boot, 100 * (1 - alpha)))
+    # One-sided p: share of bootstrap draws at or above the observed rate.
+    p_value = float(np.mean(boot >= observed))
+    return observed, lower, upper, p_value
+
+
+def cluster_rate_regression(
+    rows: Sequence[dict[str, Any]],
+    baseline_rate: float,
+    predicate: Callable[[dict[str, Any]], bool],
+    *,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> tuple[bool, float, float, float]:
+    """
+    Fail when the cluster-bootstrap lower bound exceeds the baseline rate.
+
+    False-alarm and power depend on how errors cluster across cases. With
+    i.i.d. per-cell rates the gate is liberal; Luna's baseline clusters false
+    ships in ~20 cases — use ``tests/test_gates.py`` clustered fixtures for
+    realistic figures.
+    """
+    observed, lower, upper, _ = cluster_bootstrap_rate(
+        rows, predicate, seed=seed, alpha=alpha
+    )
+    base = float(baseline_rate)
+    reject = lower > base
+    return reject, observed, lower, upper
+
+
+def false_ship_row(row: dict[str, Any]) -> bool:
+    return row.get("verdict") == "SHIP" and row.get("truth") != "SHIP"
+
+
+def run_failure_row(row: dict[str, Any]) -> bool:
+    return row.get("error") in {
+        ErrorCategory.FORMAT_FAIL.value,
+        ErrorCategory.CRASHED.value,
+    }
+
+
+def false_ship_regression(
+    k: int, n: int, baseline_rate: float, alpha: float = 0.05
+) -> tuple[bool, float]:
+    """
+    One-sided binomial test: is the false-ship count above the baseline rate?
+
+    Returns (reject, p_value). `reject` is True when the gate should fail — the
+    observed false-ship rate is significantly higher than the baseline at `alpha`.
+    """
+    if n <= 0:
+        return False, 1.0
+    p0 = min(max(float(baseline_rate), 0.0), 1.0)
+    if k == 0:
+        return False, 1.0
+    result = stats.binomtest(k, n, p0, alternative="greater")
+    p_value = float(result.pvalue)
+    return p_value < alpha, p_value
 
 
 def wilson(successes: int, n: int, conf: float = 0.95) -> tuple[float, float]:
@@ -154,6 +268,17 @@ def classify_error(case: Any, traj: Any) -> ErrorCategory | None:
     if traj.verdict is case.truth:
         return None
     return _wrong_verdict(case, traj)
+
+
+def format_fail_detail(traj: Any) -> str:
+    """Human-readable reason a trajectory failed to produce a scored verdict."""
+    detail = getattr(traj, "error", None)
+    if detail:
+        return str(detail)
+    answer = getattr(traj, "answer", "") or ""
+    if not str(answer).strip():
+        return "empty_model_response"
+    return "missing_or_invalid_verdict_line"
 
 
 def _run_failure(traj: Any) -> ErrorCategory | None:

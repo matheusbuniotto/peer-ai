@@ -65,6 +65,7 @@ def analysis_tools(sandbox: object | None = None) -> list[Tool]:
         _from_function(stats.scan_segments, bind_df=True),
         _from_function(stats.check_novelty, bind_df=True),
         _from_function(stats.check_guardrails, bind_df=True),
+        _from_function(stats.check_covariate_health, bind_df=True),
         _from_function(stats.bootstrap_analyze, bind_df=True),
         _from_function(stats.bayesian_analyze, bind_df=True),
         _from_function(stats.audit_type_m_s, bind_df=True),
@@ -78,15 +79,17 @@ def design_tools(answerer: Callable[[str], str] | None = None) -> list[Tool]:
     """Given an `answerer`, `ask` reaches a real person; without one it says so."""
     return [
         _from_function(design.power_analysis),
+        _from_function(design.round_to_whole_weeks),
         _from_function(design.simulate_design),
         _from_function(_make_ask(answerer)),
     ]
 
 
 UNANSWERED = (
-    "Nobody is available to answer that. Do not invent an answer and do not "
-    "assume one: put the question in your write-up as an open decision, and "
-    "mark anything that depends on it as provisional."
+    "Nobody is available to answer that. Do not invent an answer. If the design "
+    "protocol's conservative defaults apply, use them only with an explicit "
+    "unconfirmed-assumption note in the design output; otherwise leave the "
+    "decision open and mark dependent fields as provisional."
 )
 
 

@@ -26,22 +26,35 @@ import numpy as np
 import pandas as pd
 import yaml
 from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
 from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
+    cluster_rate_regression,
+    false_ship_row,
+    format_fail_detail,
     mcnemar,
     pass_at_k,
     pass_hat_k,
+    run_failure_row,
     srm_checked_before_lift,
     wilson,
 )
-from peer_agent.sim import NOVELTY, OUTLIERS, PEEKING, SIMPSON, SRM, Case, Flaw, make_case
+from peer_agent.sim import (
+    NOVELTY,
+    OUTLIERS,
+    PEEKING,
+    SIMPSON,
+    SRM,
+    Case,
+    Flaw,
+    make_case,
+    make_sequential_case,
+)
 from peer_agent.tools import Tool, analysis_tools
-from peer_agent.types import Verdict
+from peer_agent.types import BY_USER, DesignSpec, Verdict
 
 _SUITE_PATH = Path("evals/suite.yaml")
 _PRICES_PATH = Path("evals/pricing.yaml")
@@ -69,6 +82,10 @@ class EvalCase:
     days: int | None = None
 
     def build(self) -> Case:
+        if self.flaw == "sequential":
+            return make_sequential_case(
+                self.n, self.lift, seed=self.seed, days=self.days or 14
+            )
         flaws = [_FLAW_FNS[self.flaw]] if self.flaw in _FLAW_FNS else None
         return make_case(
             n=self.n, lift=self.lift, seed=self.seed, flaws=flaws, days=self.days
@@ -125,19 +142,67 @@ def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], list[Any]]:
 
 
 def _live_model(model: str) -> OpenAIChatModel:
+    from peer_agent.agent import openai_provider
+
     base_url = os.environ["LLM_BASE_URL"]
-    provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+    provider = openai_provider(base_url, os.environ["LLM_API_KEY"])
     return OpenAIChatModel(model, provider=provider, settings=chat_settings(base_url))
 
 
-def _review_question(case: Case) -> str:
-    stopped = case.df.attrs.get("stopped_day")
-    if stopped is None:
-        base = "Review this experiment."
-    else:
-        day = int(stopped)
-        base = f"Review this experiment. The team checked daily and stopped on day {day}."
-    return f"{base}\n\n{ROWS_ARE_LOADED}"
+def _prereg_spec(ec: EvalCase) -> DesignSpec:
+    """Same pre-registration for every case — analysis defaults, not a flaw hint."""
+    days = ec.days or 14
+    # 5% MDE: below the 6% planted lifts on clean-06..10 so real wins stay SHIP,
+    # while null clean cases can still reach NO_EFFECT when powered.
+    looks = days if ec.flaw == "sequential" else 1
+    # Per-case traffic hint (deterministic from id) so prereg text is not identical
+    # across flaws that share the same truth — without using sample size as a label.
+    digest = hashlib.sha256(ec.id.encode()).hexdigest()
+    traffic = 10_000 + int(digest[:8], 16) % 8_000
+    return DesignSpec(
+        baseline=0.12,
+        mde=0.05,
+        power=0.8,
+        days=days,
+        looks=looks,
+        n_per_arm=max(ec.n // 2, 1_000),
+        unit=BY_USER,
+        metric="converted",
+        daily_traffic=traffic,
+    )
+
+
+def format_prereg_for_prompt(spec: DesignSpec) -> str:
+    """Pre-reg block shown to the model — omits n_per_arm (visible in the data)."""
+    parts = [
+        f"baseline={spec.baseline}",
+        f"mde={spec.mde}",
+        f"power={spec.power}",
+        f"days={spec.days}",
+        f"looks={spec.looks}",
+        f"unit={spec.unit.value}",
+        f"metric={spec.metric}",
+        f"alpha={spec.alpha}",
+    ]
+    if spec.daily_traffic is not None:
+        parts.append(f"daily_traffic={spec.daily_traffic}")
+    if spec.covariate:
+        parts.append(f"covariate={spec.covariate}")
+    if spec.if_flat:
+        parts.append(f"if_flat={spec.if_flat!r}")
+    return "Pre-registered analysis defaults:\n" + "\n".join(parts)
+
+
+def _review_question() -> str:
+    return f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
+
+
+def review_prompt_text(ec: EvalCase) -> str:
+    """Full user message for a suite case (preamble + prereg + question)."""
+    from peer_agent.agent import _PREREG_PREAMBLE
+
+    spec = _prereg_spec(ec)
+    return f"{_PREREG_PREAMBLE}\n\n{format_prereg_for_prompt(spec)}\n\n{_review_question()}"
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:
@@ -192,6 +257,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
 ) -> dict[str, Any]:
     error = classify_error(ec, traj)
     input_tokens, output_tokens = _usage_tokens(traj, mode)
+    failure_detail = format_fail_detail(traj) if error is not None else None
     row: dict[str, Any] = {
         "id": ec.id,
         "flaw": ec.flaw,
@@ -202,6 +268,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
         "verdict": traj.verdict.name if traj.verdict else None,
         "correct": error is None,
         "error": None if error is None else error.value,
+        "failure_detail": failure_detail,
         "srm_checked_before_lift": srm_checked_before_lift(traj),
         "latency_s": traj.latency_s,
         "input_tokens": input_tokens,
@@ -242,7 +309,9 @@ def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
             "eval.case", case_id=ec.id, flaw=ec.flaw, trial=ctx.trial, variant=ctx.label
         ) as span:
             traj = Agent(llm, tools=ctx.tools).review(
-                built, question=_review_question(built)
+                built,
+                spec=_prereg_spec(ec),
+                question=_review_question(),
             )  # noqa: E501
             row = _case_row(
                 ec,
@@ -351,10 +420,13 @@ def _summarize(  # noqa: PLR0913, PLR0917
     trial0 = [row for row in rows if row["trial"] == 0]
     hits = sum(bool(row["correct"]) for row in trial0)
     latency = np.asarray([row["latency_s"] for row in rows], dtype=float)
-    tokens_in = _mean([row["input_tokens"] for row in rows])
-    tokens_out = _mean([row["output_tokens"] for row in rows])
-    costs = [row["cost_usd"] for row in rows]
-    total = None if any(cost is None for cost in costs) else float(sum(costs))
+    tokens_in = [row["input_tokens"] for row in rows if row["input_tokens"] is not None]
+    tokens_out = [row["output_tokens"] for row in rows if row["output_tokens"] is not None]
+    costs = [row["cost_usd"] for row in rows if row["cost_usd"] is not None]
+    missing_usage = sum(
+        1 for row in rows if row["input_tokens"] is None or row["output_tokens"] is None
+    )
+    total_cost = float(sum(costs)) if costs else None
     matrix = _matrix(rows, case_ids, trials)
     return {
         "label": label,
@@ -375,16 +447,18 @@ def _summarize(  # noqa: PLR0913, PLR0917
             )  # noqa: E501
         },
         "cost_usd": {
-            "total": total,
-            "per_case_mean": None if total is None else total / len(rows),
+            "total": total_cost,
+            "per_case_mean": None if not costs else total_cost / len(costs),
+            "missing_rows": missing_usage,
         },  # noqa: E501
         "latency_s": {
             "p50": float(np.percentile(latency, 50)),
             "p95": float(np.percentile(latency, 95)),
         },  # noqa: E501
         "tokens": {
-            "input": None if tokens_in is None else int(round(tokens_in * len(rows))),
-            "output": None if tokens_out is None else int(round(tokens_out * len(rows))),
+            "input": int(sum(tokens_in)) if tokens_in else None,
+            "output": int(sum(tokens_out)) if tokens_out else None,
+            "missing_rows": missing_usage,
         },
     }
 
@@ -508,6 +582,7 @@ _PARQUET_COLUMNS = (
     "input_tokens",
     "output_tokens",
     "cost_usd",
+    "failure_detail",
 )
 
 
@@ -788,17 +863,40 @@ def _replay_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
 
 
 def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
+    """
+    Live regression gate (tools variant, all trials, case-clustered):
+
+    - Accuracy: Wilson upper bound on trial-0 accuracy vs baseline point.
+    - False ships / run failures: case-bootstrap lower bound vs baseline rate.
+      Crashes and format failures count as regressions — the gate must not
+      reward a broken harness for fewer false ships.
+    """
     violations = []
     high = float(report.accuracy_ci[1])
     if high < float(baseline["accuracy"]):
         violations.append(
             f"accuracy CI high {high:.3f} < baseline {float(baseline['accuracy']):.3f}"
         )
-    limit = float(baseline["false_ships"]) + 0.02
-    if report.false_ships > limit:
+    variant = baseline.get("primary_variant") or _tools_label(report.cases)
+    rows = [row for row in report.cases if variant is None or row.get("variant") == variant]
+    ship_reject, ship_rate, ship_lower, _ship_upper = cluster_rate_regression(
+        rows, float(baseline["false_ships"]), false_ship_row, seed=42
+    )
+    if ship_reject:
+        base = float(baseline["false_ships"])
         violations.append(
-            f"false_ships {report.false_ships:.3f} > baseline + 0.02 ({limit:.3f})"
-        )  # noqa: E501
+            f"false_ships {ship_rate:.3f} (bootstrap lower {ship_lower:.3f}) "
+            f"> baseline {base:.3f}"
+        )
+    failure_base = float(baseline.get("run_failure_rate", 0.048484848484848485))
+    fail_reject, fail_rate, fail_lower, _fail_upper = cluster_rate_regression(
+        rows, failure_base, run_failure_row, seed=43
+    )
+    if fail_reject:
+        violations.append(
+            f"run_failures {fail_rate:.3f} (bootstrap lower {fail_lower:.3f}) "
+            f"> baseline {failure_base:.3f}"
+        )
     if violations:
         violations.extend(_paired_note(report, baseline))
     return violations
@@ -880,6 +978,12 @@ def promote_baseline(
         replay_expected = {"accuracy": harness.accuracy, "by_flaw": harness.by_flaw}
     else:
         replay_expected = {"accuracy": primary["accuracy"], "by_flaw": by_flaw}
+    primary_rows = [
+        row for row in payload.get("cases", []) if row.get("variant") == primary["label"]
+    ]
+    run_failures = sum(
+        1 for row in primary_rows if row.get("error") in ("format_fail", "crashed")
+    )
     baseline = {
         "schema_version": 2,
         "source_run": payload["run_id"],
@@ -889,6 +993,7 @@ def promote_baseline(
         "accuracy_ci": primary["accuracy_ci"],
         "pass_hat_k": primary["pass_hat_k"],
         "false_ships": primary["false_ships"],
+        "run_failure_rate": run_failures / max(len(primary_rows), 1),
         "by_flaw": by_flaw,
         "replay_expected": replay_expected,
         "primary_variant": primary["label"],

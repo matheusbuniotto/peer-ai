@@ -2,14 +2,10 @@
 
 ## Decisions
 
-No active decisions yet. The baseline split in `live-luna-run` becomes AD-001 if the plan is approved.
+- PR #17 (Kohavi review gate / eval honesty): merging without a new full live promote; baseline and README table remain 2026-10-16 until follow-up.
 
 ## Handoff
 
-**Feature**: live-luna-run
-**Where**: The published run is `2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920`. The review question says the rows are already loaded. `srm-01` replays `check_srm` then a verdict.
-**In progress**: none
-**Next step**: none. Round 3 verification passed.
-**Blockers**: none
-**Uncommitted**: none
-**Branch**: ft-eval-honesty
+**Feature**: kohavi-review-gate (PR #17)
+**Branch**: `cursor/kohavi-review-gate-eb82`
+**Next step**: merge PR; optional follow-up live re-record + `baseline promote`.

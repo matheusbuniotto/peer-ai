@@ -300,12 +300,6 @@
     "note": "format_fail"
   },
   {
-    "case_id": "peeking-07",
-    "variant": "openai/gpt-6-luna (tools)",
-    "trial": 1,
-    "note": "false_ship"
-  },
-  {
     "case_id": "peeking-08",
     "variant": "openai/gpt-6-luna (tools)",
     "trial": 1,
@@ -484,12 +478,6 @@
     "variant": "openai/gpt-6-luna (tools)",
     "trial": 2,
     "note": "other_wrong"
-  },
-  {
-    "case_id": "peeking-07",
-    "variant": "openai/gpt-6-luna (tools)",
-    "trial": 2,
-    "note": "false_ship"
   },
   {
     "case_id": "peeking-08",
@@ -802,12 +790,6 @@
     "variant": "openai/gpt-6-luna (no tools)",
     "trial": 0,
     "note": "format_fail"
-  },
-  {
-    "case_id": "peeking-09",
-    "variant": "openai/gpt-6-luna (no tools)",
-    "trial": 0,
-    "note": "missed_flaw"
   },
   {
     "case_id": "peeking-10",
@@ -1128,18 +1110,6 @@
     "note": "format_fail"
   },
   {
-    "case_id": "peeking-08",
-    "variant": "openai/gpt-6-luna (no tools)",
-    "trial": 1,
-    "note": "missed_flaw"
-  },
-  {
-    "case_id": "peeking-09",
-    "variant": "openai/gpt-6-luna (no tools)",
-    "trial": 1,
-    "note": "missed_flaw"
-  },
-  {
     "case_id": "peeking-10",
     "variant": "openai/gpt-6-luna (no tools)",
     "trial": 1,
@@ -1456,12 +1426,6 @@
     "variant": "openai/gpt-6-luna (no tools)",
     "trial": 2,
     "note": "format_fail"
-  },
-  {
-    "case_id": "peeking-08",
-    "variant": "openai/gpt-6-luna (no tools)",
-    "trial": 2,
-    "note": "missed_flaw"
   },
   {
     "case_id": "peeking-09",

@@ -1,52 +1,49 @@
 ---
 name: review-protocol
-description: The protocol for reviewing a finished A/B test - validate the split, check guardrails, then judge the primary metric. Load this before calling check_srm/analyze/sequential/scan_segments/check_novelty/check_guardrails/bootstrap_analyze/bayesian_analyze/audit_type_m_s.
+description: The protocol for reviewing a finished A/B test - validate the split, check guardrails, then judge the primary metric. Load this before calling check_srm/analyze/sequential/scan_segments/check_novelty/check_guardrails/check_covariate_health/bootstrap_analyze/bayesian_analyze/audit_type_m_s.
 ---
 
 Never skip steps. Never invent a number you haven't computed with a tool.
 
-1. **Validate first.** Call `check_srm`, passing the pre-registered `ratio`
-   (a 90/10 holdout is a design, not a defect) and `by` for any segment or
-   day column the data has — a split can balance overall while tilting
-   inside a segment, and that is what a composition skew looks like. If the
-   split is broken, stop:
-   verdict is INVALID. Do not call `analyze`. State the verdict and *why*
-   the split is broken in plain words only. Do not write down a single
-   digit — no percentages, counts, ratios, multipliers ("roughly Nx"), or
-   any other figure describing the imbalance or anything derived from it.
-   Nothing computed from a broken split is trustworthy enough to put in
-   front of a reader, including numbers about the brokenness itself. If
-   you feel the urge to quantify how broken it is, that's the tell to stop
-   and say only that it's broken.
-2. **Guardrails before the headline.** Before shipping anything, call
-   `check_guardrails` with every guardrail the pre-registration names, each
-   with its margin. It answers `clean`, `breached`, or `inconclusive` per
-   guardrail. Only `clean` lets a ship through. `inconclusive` means the
-   data can't rule out harm past the margin, and it blocks exactly like a
-   breach — an underpowered safety check is not a passed one, and
-   `blocks_ship` on the result is the single flag to read. Report the bound,
-   not just the status.
-3. **The primary metric.** Call `analyze` (and `sequential` if the
-   experiment has been running long enough to have been peeked at). If the
-   rows are visits rather than people, pass `unit` — the column the
-   experiment randomised on. Repeat rows are not repeat evidence, and
-   `analyze` will refuse rather than answer a question about rows.
-   - Significant, durable, guardrails clean → SHIP. Scepticism that blocks
-     everything is as useless as none at all.
-   - A significant early effect that `check_novelty` flags as decaying is
-     not a win — verdict is EXTEND, not SHIP.
-   - Not significant, and `equivalent_to_null` is true → the experiment was
-     big enough to rule out an effect worth having. Verdict is NO_EFFECT.
-   - Not significant, and `equivalent_to_null` is false or null → you cannot
-     tell an absent effect from a test too small to find one. Verdict is
-     INCONCLUSIVE. Say what it would take to answer the question. Do not
-     dress this up as NO_EFFECT, and do not go looking for a segment where
-     it "worked" — an unresolved primary is not a license to fish.
-   - Optional corroboration: `bootstrap_analyze` and `bayesian_analyze` use
-     the same `unit` rule as `analyze`. When a result is significant but the
-     experiment was sized for a much larger lift, call `audit_type_m_s` before
-     treating the headline lift at face value — Type M inflation is how
-     underpowered "winners" oversell the truth.
-4. State the verdict as
-   `VERDICT: <NO_EFFECT|INCONCLUSIVE|INVALID|SHIP|EXTEND>` followed by your
-   reasoning.
+Think in Kohavi's OEC: one primary metric decides ship/no-ship; guardrails
+protect the business; diagnostics explain mechanism. Do not optimize a
+secondary metric at the expense of the OEC.
+
+1. **Validate first (trust).** Call `check_srm`, passing the pre-registered `ratio`
+   and `by` only for columns that exist in the data (if a column is missing, the
+   tool will list what is available — do not guess). A 90/10 holdout is a design,
+   not a defect. If the split is broken, stop: verdict is INVALID. Do not call
+   `analyze`. State the verdict and *why* the split is broken in plain words only.
+   Do not write down digits describing the imbalance.
+2. **Guardrails before the headline.** Call `check_guardrails` with every named
+   guardrail and margin. Only `clean` lets a ship through; `inconclusive` blocks
+   like a breach (`blocks_ship` is the flag to read).
+3. **Covariate and segments before trusting the headline.**
+   - If `pre_period_metric` exists, call `check_covariate_health` before CUPED.
+     When `cuped_unsafe` is true, run `analyze` without CUPED.
+   - If `segment` exists, call `scan_segments`. A `reversal` or segment composition
+     SRM means the aggregate OEC is misleading — do not SHIP on the headline alone;
+     use INCONCLUSIVE (or NO_EFFECT if the primary is null and adequately powered)
+     and explain the segment story. A reversal is not automatic INVALIDity unless
+     SRM or optional stopping already broke trust.
+4. **Multiple looks / optional stopping.** When a `day` or `cohort_day` column
+   exists, call `sequential` with the pre-registered `looks` and `alpha` from the
+   spec (do not pass `looks: null` when a multi-look plan was pre-registered).
+   - If `looks` is 1 but the data cover fewer calendar days than the pre-registered
+     `days`, the run stopped early without a sequential plan → INVALID (optional
+     stopping), even when `sequential` or `analyze` look significant.
+   - If `looks` > 1, a pre-registered group-sequential plan applies: trust a
+     positive primary only when `sequential` reports `reject: true` and guardrails
+     are clean; if `reject: false` on a null experiment, proceed to step 5 for
+     equivalence / INCONCLUSIVE — do not call INVALID merely because monitoring
+     was daily.
+5. **Primary metric.** Call `analyze` with the pre-registered `mde` when one was
+   supplied. Pass `unit` when rows are visits, not people.
+   - Significant positive lift (`p` below `alpha`), guardrails clean, and step 4
+     did not invalidate the run → SHIP (check novelty / Type M if indicated).
+   - Decaying novelty → EXTEND.
+   - Not significant and `equivalent_to_null` → NO_EFFECT (only after ruling out
+     a significant win in the previous bullet).
+   - Not significant and not equivalent → INCONCLUSIVE (underpowered or no MDE).
+   - Surprisingly large lift → `audit_type_m_s` (Twyman / Type M) before trusting it.
+6. State `VERDICT: <NO_EFFECT|INCONCLUSIVE|INVALID|SHIP|EXTEND>` and reasoning.

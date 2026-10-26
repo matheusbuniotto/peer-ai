@@ -109,6 +109,7 @@
         "input_tokens": {"type": ["integer", "null"]},
         "output_tokens": {"type": ["integer", "null"]},
         "cost_usd": {"type": ["number", "null"]},
+        "failure_detail": {"type": ["string", "null"]},
         "trajectory": {"type": "array"}
       }
     }

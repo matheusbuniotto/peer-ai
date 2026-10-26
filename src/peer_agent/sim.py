@@ -166,6 +166,42 @@ class Case:
         return path
 
 
+def sequential_review_truth(
+    df: pd.DataFrame,
+    lift: float,
+    *,
+    looks: int,
+    mde: float = 0.05,
+    alpha: float = 0.05,
+) -> Verdict:
+    """Label for a completed run under a pre-registered daily group-sequential plan."""
+    from peer_agent import stats
+
+    primary = stats.analyze(df, mde=mde, alpha=alpha)
+    seq = stats.sequential(df, looks=looks, alpha=alpha)
+    if lift == 0.0:
+        if primary.equivalent_to_null:
+            return Verdict.NO_EFFECT
+        return Verdict.INCONCLUSIVE
+    if seq.reject and primary.p_value < alpha and primary.lift > 0:
+        return Verdict.SHIP
+    return Verdict.INCONCLUSIVE
+
+
+def make_sequential_case(
+    n: int,
+    lift: float,
+    *,
+    seed: int = 0,
+    days: int = 14,
+) -> Case:
+    rng = np.random.default_rng(seed)
+    df = _populate(n, lift, rng, days, None)
+    df.attrs["planned_days"] = days
+    truth = sequential_review_truth(df, lift, looks=days, mde=0.05)
+    return Case(df=df, truth=truth)
+
+
 def make_case(  # noqa: PLR0913 (a simulator needs independent knobs)
     n: int,
     lift: float = 0.0,

@@ -51,13 +51,25 @@ _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
 _SKILLS_DIR = Path(str(resources.files("peer_agent").joinpath("skills")))
 _REPORTS_DIR = Path("reports")
 _PREREG_PREAMBLE = (
-    "Pre-registered plan for this experiment. These choices were fixed before "
-    "anyone saw the data — follow them, and say so plainly if you depart from any."
+    "Pre-registered analysis defaults for this review. Apply them unless you "
+    "document a justified departure in the write-up."
 )
 ROWS_ARE_LOADED = (
     "The experiment rows are already loaded. The tools read them. "
     "Do not ask for a file. Call the tools, then give a VERDICT."
 )
+
+
+def _skill_markdown(path: Path) -> str:
+    text = path.read_text()
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            return text[end + 3 :].lstrip()
+    return text
+
+
+_REVIEW_PROTOCOL_BODY = _skill_markdown(_SKILLS_DIR / "review-protocol" / "SKILL.md")
 
 
 def _files_capability() -> FileSystem:
@@ -74,6 +86,16 @@ class OverBudget(Exception):
     pass
 
 
+def request_timeout_s() -> float:
+    """Wall-clock limit for one model request (HTTP layer). Default three minutes."""
+    return float(os.environ.get("PEER_REQUEST_TIMEOUT_S", "180"))
+
+
+def openai_provider(base_url: str, api_key: str) -> OpenAIProvider:
+    """Provider without a custom httpx client — timeout is set on model settings."""
+    return OpenAIProvider(base_url=base_url, api_key=api_key)
+
+
 def chat_settings(base_url: str) -> OpenAIChatModelSettings:
     """Leave OpenAI's `store` field off the request when the host is OpenRouter.
 
@@ -81,9 +103,10 @@ def chat_settings(base_url: str) -> OpenAIChatModelSettings:
     compatible endpoints 500 when conversation storage stays at its default, so
     those keep `store` off.
     """
+    timeout = request_timeout_s()
     if "openrouter.ai" in base_url:
-        return OpenAIChatModelSettings()
-    return OpenAIChatModelSettings(openai_store=False)
+        return OpenAIChatModelSettings(timeout=timeout)
+    return OpenAIChatModelSettings(openai_store=False, timeout=timeout)
 
 
 _logfire_configured = False
@@ -127,6 +150,25 @@ def json_default(obj: Any) -> Any:
     if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
         return dataclasses.asdict(obj)
     return str(obj)
+
+
+def _failed_trajectory(
+    kind: str,
+    calls: list[ToolCall],
+    *,
+    started: float,
+    exc: Exception,
+    spec: DesignSpec | None = None,
+) -> Trajectory:
+    traj = Trajectory(
+        calls=calls,
+        done=False,
+        error=f"{type(exc).__name__}: {exc}",
+        spec=spec,
+        latency_s=time.perf_counter() - started,
+    )
+    _log_trajectory(kind, traj)
+    return traj
 
 
 def _log_trajectory(kind: str, traj: Trajectory, *, case_id: str | None = None) -> None:
@@ -257,6 +299,16 @@ def _cite_the_toolbox(calls: list[ToolCall]) -> Callable[[str], str]:
     return validate
 
 
+def _verdict_error(answer: str, verdict: Verdict | None) -> str | None:
+    if verdict is not None:
+        return None
+    return (
+        "empty_model_response"
+        if not str(answer).strip()
+        else "missing_or_invalid_verdict_line"
+    )
+
+
 def _redact(answer: str, invented: tuple[str, ...]) -> str:
     """Last resort, once the model has had its chance: strike the figures out
     rather than hand a reader a number nothing stands behind."""
@@ -264,6 +316,23 @@ def _redact(answer: str, invented: tuple[str, ...]) -> str:
         number = re.escape(literal.rstrip("%"))
         answer = re.sub(rf"(?<![\w.]){number}(?![\d.])", "[unsupported]", answer, count=1)
     return answer
+
+
+def _dataframe_from_partial(partial: functools.partial) -> Any:
+    import pandas as pd
+
+    for arg in partial.args:
+        if isinstance(arg, pd.DataFrame):
+            return arg
+    return None
+
+
+def _tool_error_message(partial: functools.partial, exc: Exception) -> str:
+    frame = _dataframe_from_partial(partial)
+    if frame is not None:
+        columns = ", ".join(sorted(frame.columns))
+        return f"{exc}. Available columns: {columns}"
+    return str(exc)
 
 
 class _RecordingCall(functools.partial):
@@ -277,10 +346,9 @@ class _RecordingCall(functools.partial):
     def __call__(self, /, **kwargs: Any) -> Any:
         try:
             result = super().__call__(**kwargs)
-        except ValueError as exc:
-            # e.g. a stats check needing a column this case doesn't have — let the
-            # model see the failure and adjust, instead of crashing the whole run.
-            raise ModelRetry(str(exc)) from exc
+        except (ValueError, KeyError) as exc:
+            # Missing columns or invalid args must return to the model, not kill the run.
+            raise ModelRetry(_tool_error_message(self, exc)) from exc
         self._calls.append(ToolCall(self._tool_name, kwargs, result))
         return result
 
@@ -375,7 +443,7 @@ class Agent:
         if missing:
             raise RuntimeError(f"{', '.join(missing)} not set — see .env.example")
         base_url = os.environ["LLM_BASE_URL"]
-        provider = OpenAIProvider(base_url=base_url, api_key=os.environ["LLM_API_KEY"])
+        provider = openai_provider(base_url, os.environ["LLM_API_KEY"])
         model = OpenAIChatModel(
             os.environ["LLM_MODEL"], provider=provider, settings=chat_settings(base_url)
         )
@@ -383,6 +451,19 @@ class Agent:
 
     def _model(self, adapter: Any) -> Any:
         return self.llm if isinstance(self.llm, Model) else FunctionModel(adapter)
+
+    def _capabilities(self, *, files: bool, skills: bool) -> list[Any]:
+        caps: list[Any] = []
+        if skills:
+            caps.append(Skills(_SKILLS_DIR, include=["review-protocol"]))
+        if files:
+            caps.append(_files_capability())
+        return caps
+
+    def _review_system_prompt(self) -> str:
+        if self.tools:
+            return _PROMPT
+        return f"{_PROMPT}\n\n{_REVIEW_PROTOCOL_BODY}"
 
     def chat_agent(self, df: Any) -> PydanticAgent:
         """
@@ -393,11 +474,10 @@ class Agent:
         return PydanticAgent(
             self.llm,
             tools=pai_tools,
-            system_prompt=_PROMPT,
-            capabilities=[
-                Skills(_SKILLS_DIR, include=["review-protocol"]),
-                _files_capability(),
-            ],
+            system_prompt=self._review_system_prompt(),
+            capabilities=self._capabilities(
+                files=bool(self.tools), skills=bool(self.tools)
+            ),
         )
 
     def review(
@@ -415,7 +495,11 @@ class Agent:
         if question is None:
             question = f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
         if spec is not None:
-            question = f"{_PREREG_PREAMBLE}\n\n{spec}\n\n{question}"
+            from peer_agent.evals import format_prereg_for_prompt
+
+            question = (
+                f"{_PREREG_PREAMBLE}\n\n{format_prereg_for_prompt(spec)}\n\n{question}"
+            )
 
         def adapter(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             del info
@@ -427,11 +511,10 @@ class Agent:
         pai_agent = PydanticAgent(
             self._model(adapter),
             tools=pai_tools,
-            system_prompt=_PROMPT,
-            capabilities=[
-                Skills(_SKILLS_DIR, include=["review-protocol"]),
-                _files_capability(),
-            ],
+            system_prompt=self._review_system_prompt(),
+            capabilities=self._capabilities(
+                files=bool(self.tools), skills=bool(self.tools)
+            ),
         )
         pai_agent.output_validator(_cite_the_toolbox(calls))
         started = time.perf_counter()
@@ -442,6 +525,8 @@ class Agent:
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        except Exception as exc:
+            return _failed_trajectory("review", calls, spec=spec, started=started, exc=exc)
         latency_s = time.perf_counter() - started
 
         answer = result.output
@@ -464,6 +549,7 @@ class Agent:
             spec=spec,
             usage=_read_usage(result),
             latency_s=latency_s,
+            error=_verdict_error(answer, verdict),
         )
         _log_trajectory("review", traj)
         return traj
@@ -497,6 +583,8 @@ class Agent:
             )
         except UsageLimitExceeded as exc:
             raise OverBudget(str(exc)) from exc
+        except Exception as exc:
+            return _failed_trajectory("design", calls, started=started, exc=exc)
         latency_s = time.perf_counter() - started
         usage = _read_usage(result)
 

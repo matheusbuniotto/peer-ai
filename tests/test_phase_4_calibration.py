@@ -253,6 +253,13 @@ def test_a_real_regression_past_the_margin_breaches():
 # --------------------------------------------------------------------------- #
 
 
+def test_the_clean_null_live_fixture_is_equivalent_at_five_percent_mde():
+    """Matches conftest `clean` (n=80_000, seed=1) used by the live NO_EFFECT test."""
+    df = null_case(1, n=80_000)
+    result = stats.analyze(df, mde=0.05)
+    assert result.equivalent_to_null is True
+
+
 def test_a_flat_result_is_only_a_null_when_the_mde_is_excluded():
     """
     Same data, same p-value, two different answers. Without an MDE all you can

@@ -16,6 +16,14 @@ _SESSION_CONTAMINATION = (
 )
 
 
+def round_to_whole_weeks(days: int) -> int:
+    """Snap a runtime to the nearest whole number of weeks (minimum one week)."""
+    if days <= 0:
+        raise ValueError("days must be positive")
+    weeks = max(1, round(days / 7))
+    return weeks * 7
+
+
 def power_analysis(
     baseline: float, mde: float, power: float = 0.8, alpha: float = _ALPHA
 ) -> PowerResult:

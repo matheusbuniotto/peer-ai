@@ -10,6 +10,7 @@
   ],
   "pass_hat_k": 0.38181818181818183,
   "false_ships": 0.24242424242424243,
+  "run_failure_rate": 0.048484848484848485,
   "by_flaw": {
     "clean": 0.3,
     "novelty": 0.9,
@@ -25,6 +26,7 @@
       "novelty": 0.9,
       "outliers": 0.0,
       "peeking": 0.0,
+      "sequential": 0.0,
       "simpson": 0.0,
       "srm": 1.0
     }
