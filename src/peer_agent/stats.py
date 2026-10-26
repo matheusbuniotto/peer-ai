@@ -13,6 +13,8 @@ from tea_tasting.metrics.proportion import SampleRatioResult
 
 from peer_agent.types import (
     AnalyzeResult,
+    BayesianResult,
+    BootstrapResult,
     Guardrail,
     GuardrailResult,
     GuardrailStatus,
@@ -20,6 +22,8 @@ from peer_agent.types import (
     SegmentScanResult,
     SequentialResult,
     SRMResult,
+    TypeMSEntry,
+    TypeMSResult,
 )
 
 SRM_ALPHA = 0.001
@@ -567,3 +571,165 @@ def _one_sided_bounds(
         side("greater").rel_effect_size_ci_lower,
         side("less").rel_effect_size_ci_upper,
     )
+
+
+def _binary_arms(
+    df: pd.DataFrame,
+    *,
+    control: bool | int | str = CONTROL,
+    unit: str | None = None,
+    column: str = "converted",
+) -> tuple[int, int, int, int, float, float]:
+    """Counts, successes, and rates for control and treatment after unit collapse."""
+    collapsed, _ = _one_row_per_unit(df, unit)
+    arm = collapsed["arm"].to_numpy()
+    converted = collapsed[column].to_numpy().astype(float)
+    control_rows = arm == control
+    n_c = int(control_rows.sum())
+    n_t = int((~control_rows).sum())
+    if n_c == 0 or n_t == 0:
+        raise ValueError("need at least one row in both control and treatment")
+    k_c = int(converted[control_rows].sum())
+    k_t = int(converted[~control_rows].sum())
+    p_c = k_c / n_c
+    p_t = k_t / n_t
+    return n_c, n_t, k_c, k_t, p_c, p_t
+
+
+def bootstrap_analyze(  # noqa: PLR0913
+    df: pd.DataFrame,
+    *,
+    control: bool | int | str = CONTROL,
+    alpha: float = ALPHA,
+    n_bootstrap: int = 10_000,
+    seed: int = 42,
+    unit: str | None = None,
+) -> BootstrapResult:
+    """
+    Non-parametric bootstrap on conversion rates (binomial resampling per arm).
+
+    Seeded for reproducibility. Relative lift and its percentile interval match
+    the scale returned by `analyze`; the p-value is a two-sided null-shifted
+    bootstrap test on the absolute rate difference.
+    """
+    n_c, n_t, _, _, p_c, p_t = _binary_arms(df, control=control, unit=unit)
+    rng = np.random.default_rng(seed)
+    boot_c = rng.binomial(n_c, p_c, n_bootstrap) / n_c
+    boot_t = rng.binomial(n_t, p_t, n_bootstrap) / n_t
+    boot_abs = boot_t - boot_c
+    boot_rel = np.where(p_c > 0, boot_abs / p_c, np.nan)
+    observed_abs = p_t - p_c
+    observed_rel = observed_abs / p_c if p_c > 0 else float("nan")
+
+    lo_pct, hi_pct = 100 * alpha / 2, 100 * (1 - alpha / 2)
+    ci_rel = np.percentile(boot_rel, [lo_pct, hi_pct])
+    centred = boot_abs - boot_abs.mean()
+    p_value = float(np.mean(np.abs(centred) >= abs(observed_abs)))
+
+    return BootstrapResult(
+        p_value=p_value,
+        lift=float(observed_rel),
+        ci_low=float(ci_rel[0]),
+        ci_high=float(ci_rel[1]),
+        abs_lift=float(observed_abs),
+        n_bootstrap=n_bootstrap,
+        seed=seed,
+    )
+
+
+def bayesian_analyze(  # noqa: PLR0913
+    df: pd.DataFrame,
+    *,
+    control: bool | int | str = CONTROL,
+    credible: float = 0.95,
+    prior_alpha: float = 1.0,
+    prior_beta: float = 1.0,
+    n_samples: int = 200_000,
+    seed: int = 42,
+    unit: str | None = None,
+) -> BayesianResult:
+    """
+    Conjugate Beta-Binomial model with a Beta(`prior_alpha`, `prior_beta`) prior.
+
+    Monte Carlo draws are seeded. Returns the posterior probability that treatment
+    beats control and a credible interval for the absolute rate difference.
+    """
+    n_c, n_t, k_c, k_t, p_c, p_t = _binary_arms(df, control=control, unit=unit)
+    post_c = sps.beta(prior_alpha + k_c, prior_beta + n_c - k_c)
+    post_t = sps.beta(prior_alpha + k_t, prior_beta + n_t - k_t)
+    rng = np.random.default_rng(seed)
+    samples_c = post_c.rvs(n_samples, random_state=rng)
+    samples_t = post_t.rvs(n_samples, random_state=rng)
+    diff = samples_t - samples_c
+    prob_better = float(np.mean(diff > 0))
+    lo, hi = np.percentile(diff, [(1 - credible) / 2 * 100, (1 + credible) / 2 * 100])
+    rel = np.where(samples_c > 0, diff / samples_c, np.nan)
+    expected_rel = float(np.nanmean(rel))
+
+    return BayesianResult(
+        prob_treatment_better=prob_better,
+        expected_rel_lift=expected_rel,
+        credible_low=float(lo),
+        credible_high=float(hi),
+        control_rate=float(p_c),
+        treatment_rate=float(p_t),
+    )
+
+
+_DEFAULT_TYPE_M_GRID = (0.0025, 0.005, 0.01, 0.015, 0.02, 0.0284, 0.05)
+
+
+def audit_type_m_s(  # noqa: PLR0913
+    df: pd.DataFrame,
+    *,
+    control: bool | int | str = CONTROL,
+    alpha: float = ALPHA,
+    true_rel_lifts: Sequence[float] = _DEFAULT_TYPE_M_GRID,
+    unit: str | None = None,
+) -> TypeMSResult:
+    """
+    Gelman & Carlin (2014) Type M (exaggeration) and Type S (wrong sign) audit.
+
+    Uses the experiment's harmonic-mean sample size and control conversion rate
+    to compute retrospective design error rates at each plausible true relative lift.
+    """
+    n_c, n_t, _, _, p_c, _ = _binary_arms(df, control=control, unit=unit)
+    if p_c <= 0:
+        raise ValueError("control conversion rate must be positive for a relative SE")
+    n_harm = 2.0 / (1.0 / n_c + 1.0 / n_t)
+    se_abs = float(np.sqrt(2.0 * p_c * (1.0 - p_c) / n_harm))
+    se_rel = se_abs / p_c
+    z_crit = float(sps.norm.ppf(1.0 - alpha / 2.0))
+
+    entries: list[TypeMSEntry] = []
+    for true_rel in true_rel_lifts:
+        power, type_s, type_m = _retrodesign_type_m_s(true_rel, se_rel, z_crit)
+        entries.append(
+            TypeMSEntry(
+                true_rel_lift=float(true_rel),
+                power=power,
+                type_s=type_s,
+                type_m=type_m,
+            )
+        )
+    return TypeMSResult(baseline_rate=p_c, se_rel=se_rel, entries=tuple(entries))
+
+
+def _retrodesign_type_m_s(
+    true_rel: float, se_rel: float, z_crit: float
+) -> tuple[float, float, float]:
+    """Type M/S and power for a two-sided normal test on relative lift."""
+    if se_rel <= 0 or true_rel == 0:
+        return float("nan"), float("nan"), float("nan")
+    p_hi = 1.0 - sps.norm.cdf(z_crit - true_rel / se_rel)
+    p_lo = float(sps.norm.cdf(-z_crit - true_rel / se_rel))
+    power = p_hi + p_lo
+    if power <= 0:
+        return power, float("nan"), float("nan")
+    type_s = p_lo / power
+    z1 = (z_crit * se_rel - true_rel) / se_rel
+    z2 = (-z_crit * se_rel - true_rel) / se_rel
+    e_hi = true_rel * p_hi + se_rel * float(sps.norm.pdf(z1))
+    e_lo = -true_rel * p_lo + se_rel * float(sps.norm.pdf(z2))
+    type_m = (e_hi + e_lo) / (power * abs(true_rel))
+    return float(power), float(type_s), float(type_m)

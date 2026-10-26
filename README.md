@@ -58,7 +58,7 @@ Model `openai/gpt-6-luna`, run `2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920`,
 
 ## How the review works
 
-The agent calls tools instead of inventing a p-value. SRM (binomial sample-ratio test) and CUPED are computed by tea-tasting; `stats.py` adds unit-of-analysis collapse, TOST, segment heterogeneity (Cochran Q), novelty trend and sequential boundaries.
+The agent calls tools instead of inventing a p-value. SRM (binomial sample-ratio test) and CUPED are computed by tea-tasting; `stats.py` adds unit-of-analysis collapse, TOST, segment heterogeneity (Cochran Q), novelty trend and sequential boundaries, plus seeded bootstrap and Beta–Binomial Bayesian checks and a Gelman–Carlin Type M/S audit (from the owner's [`ab-test-analytics`](https://github.com/matheusbuniotto/ab-test-analytics) repo).
 
 `sequential` defaults to Lan-DeMets O'Brien-Fleming spending. `method="bonferroni"` is the older rule: compare the final p-value with `alpha / looks`. That is a correction, not an alpha-spending design.
 
@@ -73,7 +73,7 @@ src/peer_agent/
   agent.py        tool loop, usage, latency
   evals.py        suite runner, results schema v2, replay and live gates
   scoring.py      Wilson, pass^k, McNemar, error taxonomy
-  stats.py        SRM, CUPED, TOST, segments, novelty, sequential boundaries
+  stats.py        SRM, CUPED, TOST, segments, novelty, sequential, bootstrap, Bayes, Type M/S
   sim.py          planted flaws, including the peeking stopping rule
   report.py       README table and error report
   demo.py         one-command demo

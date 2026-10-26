@@ -158,6 +158,42 @@ class GuardrailResult:
 
 
 @dataclass(frozen=True)
+class BootstrapResult:
+    p_value: float
+    lift: float
+    ci_low: float
+    ci_high: float
+    abs_lift: float
+    n_bootstrap: int
+    seed: int
+
+
+@dataclass(frozen=True)
+class BayesianResult:
+    prob_treatment_better: float
+    expected_rel_lift: float
+    credible_low: float
+    credible_high: float
+    control_rate: float
+    treatment_rate: float
+
+
+@dataclass(frozen=True)
+class TypeMSEntry:
+    true_rel_lift: float
+    power: float
+    type_s: float
+    type_m: float
+
+
+@dataclass(frozen=True)
+class TypeMSResult:
+    baseline_rate: float
+    se_rel: float
+    entries: tuple[TypeMSEntry, ...]
+
+
+@dataclass(frozen=True)
 class PowerResult:
     n_per_arm: int
 

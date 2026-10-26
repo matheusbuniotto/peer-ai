@@ -1,6 +1,6 @@
 ---
 name: review-protocol
-description: The protocol for reviewing a finished A/B test - validate the split, check guardrails, then judge the primary metric. Load this before calling check_srm/analyze/sequential/scan_segments/check_novelty/check_guardrails.
+description: The protocol for reviewing a finished A/B test - validate the split, check guardrails, then judge the primary metric. Load this before calling check_srm/analyze/sequential/scan_segments/check_novelty/check_guardrails/bootstrap_analyze/bayesian_analyze/audit_type_m_s.
 ---
 
 Never skip steps. Never invent a number you haven't computed with a tool.
@@ -42,6 +42,11 @@ Never skip steps. Never invent a number you haven't computed with a tool.
      INCONCLUSIVE. Say what it would take to answer the question. Do not
      dress this up as NO_EFFECT, and do not go looking for a segment where
      it "worked" — an unresolved primary is not a license to fish.
+   - Optional corroboration: `bootstrap_analyze` and `bayesian_analyze` use
+     the same `unit` rule as `analyze`. When a result is significant but the
+     experiment was sized for a much larger lift, call `audit_type_m_s` before
+     treating the headline lift at face value — Type M inflation is how
+     underpowered "winners" oversell the truth.
 4. State the verdict as
    `VERDICT: <NO_EFFECT|INCONCLUSIVE|INVALID|SHIP|EXTEND>` followed by your
    reasoning.
