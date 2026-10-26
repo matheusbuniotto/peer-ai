@@ -34,6 +34,7 @@ def _row(case: dict[str, Any]) -> dict[str, Any]:
         "scores": {
             "correct": float(bool(case["correct"])),
             "srm_checked_before_lift": float(bool(case["srm_checked_before_lift"])),
+            "fabricated": float(bool(case.get("fabricated", False))),
         },
         "metadata": {
             "error": case["error"],

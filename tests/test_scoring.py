@@ -22,6 +22,7 @@ from peer_agent.scoring import (
     pass_at_k,
     pass_hat_k,
     srm_checked_before_lift,
+    trajectory_fabricated,
     wilson,
 )
 from peer_agent.types import Verdict
@@ -180,3 +181,107 @@ def test_srm_checked_before_lift_requires_the_tool_first():
     assert srm_checked_before_lift(good)
     assert not srm_checked_before_lift(late)
     assert not srm_checked_before_lift(missing)
+
+
+def _traj_with_results(
+    verdict: Verdict | None,
+    calls: list[tuple[str, object]],
+    *,
+    answer: str,
+) -> Trajectory:
+    return Trajectory(
+        calls=[ToolCall(name, {}, result) for name, result in calls],
+        verdict=verdict,
+        answer=answer,
+        done=True,
+    )
+
+
+def test_fabricated_copied_from_tool_output():
+    result = SimpleNamespace(
+        p_value=0.042,
+        lift=0.1899441340782122,
+        ci_low=0.14161939481982477,
+        ci_high=0.24031445913777616,
+    )
+    answer = "VERDICT: SHIP\nLift 18.99% (95% CI 14.16% to 24.03%), p=4.2e-2."
+    traj = _traj_with_results(Verdict.SHIP, [("analyze", result)], answer=answer)
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_allows_rounding_within_tolerance():
+    result = SimpleNamespace(lift=0.1899441340782122)
+    traj = _traj_with_results(
+        Verdict.SHIP,
+        [("analyze", result)],
+        answer="VERDICT: SHIP\nObserved lift 19.0%.",
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_flags_numbers_absent_from_tools():
+    result = SimpleNamespace(lift=0.05, p_value=0.2)
+    traj = _traj_with_results(
+        Verdict.SHIP,
+        [("analyze", result)],
+        answer="VERDICT: SHIP\nLift 12.0% with p=0.001.",
+    )
+    assert trajectory_fabricated(traj)
+
+
+def test_fabricated_percent_and_fraction_equivalence():
+    result = SimpleNamespace(lift=0.0523)
+    traj = _traj_with_results(
+        Verdict.NO_EFFECT,
+        [("analyze", result)],
+        answer="VERDICT: NO_EFFECT\nRelative lift 5.23%.",
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_scientific_notation_in_answer():
+    result = SimpleNamespace(p_value=1.23e-5)
+    traj = _traj_with_results(
+        Verdict.SHIP,
+        [("analyze", result)],
+        answer="VERDICT: SHIP\np=1.23e-5",
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_false_when_answer_has_no_graded_numbers():
+    traj = _traj_with_results(
+        Verdict.INVALID,
+        [("check_srm", SimpleNamespace(p_value=1e-9))],
+        answer="VERDICT: INVALID — broken split.",
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_with_no_tool_outputs_and_a_stated_number():
+    traj = Trajectory(calls=[], answer="VERDICT: SHIP\nEstimated lift 12.0%.", done=True)
+    assert trajectory_fabricated(traj)
+
+
+def test_fabricated_ignores_confidence_level_before_interval_phrase():
+    result = SimpleNamespace(lift=0.559851, ci_low=0.493028, ci_high=0.629664)
+    traj = _traj_with_results(
+        Verdict.EXTEND,
+        [("analyze", result)],
+        answer=(
+            "VERDICT: EXTEND\n"
+            "Lift 55.99% with a 95% confidence interval of 49.30% to 62.97%."
+        ),
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_accepts_prereg_numbers_from_context():
+    result = SimpleNamespace(lift=0.05)
+    traj = _traj_with_results(
+        Verdict.NO_EFFECT,
+        [("analyze", result)],
+        answer="VERDICT: NO_EFFECT\nRegistered MDE is 5%.",
+    )
+    context = "Pre-registered analysis defaults:\nbaseline=0.12\nmde=0.05\n"
+    assert not trajectory_fabricated(traj, context=context)

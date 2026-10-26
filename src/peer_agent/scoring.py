@@ -8,8 +8,10 @@ treat correlated repeats as extra cases and make the interval too narrow.
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from enum import StrEnum
 from typing import Any, Literal
 
@@ -19,6 +21,20 @@ from scipy import stats
 from peer_agent.types import Verdict
 
 _LIFT_TOOLS = frozenset({"analyze", "scan_segments"})
+_REL_TOL = 1e-3
+_NUMBER = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
+_PERCENT = re.compile(r"(-?\d+(?:\.\d+)?)\s*%")
+_VERDICT_LINE = re.compile(r"\bVERDICT\b", re.IGNORECASE)
+_CI_LEVEL = re.compile(
+    r"\b(90|95|99)\s*%\s*(?:CI|confidence interval)\b",
+    re.IGNORECASE,
+)
+
+
+@dataclass(frozen=True)
+class _GradedLiteral:
+    value: float
+    decimals: int
 
 
 class ErrorCategory(StrEnum):
@@ -330,3 +346,116 @@ def srm_checked_before_lift(traj: Any) -> bool:
         return False
     srm_at = names.index("check_srm")
     return all(index > srm_at for index, name in enumerate(names) if name in _LIFT_TOOLS)
+
+
+def trajectory_fabricated(traj: Any, *, context: str = "") -> bool:
+    """True when a graded number in the final answer is absent from tool outputs.
+
+    Graded literals are parsed from the answer (VERDICT lines omitted): percents,
+    p-values, lifts, CI bounds, and other numeric claims. Each must match some
+    number in tool results, tool arguments, or the review ``context`` (prereg
+    prompt) within relative tolerance ``1e-3`` and half the least-significant
+    digit implied by how the answer wrote the number. Percent/fraction rescaling
+    (×100 and ÷100) is tried. Confidence levels before ``CI`` or
+    ``confidence interval`` (90, 95, 99) are ignored. Spelled-out numbers and
+    ratios are not checked.
+    """
+    answer = getattr(traj, "answer", "") or ""
+    graded = _graded_answer_literals(answer)
+    if not graded:
+        return False
+    evidence = _tool_evidence_strings(traj)
+    if context:
+        evidence.append(context)
+    return any(not _literal_in_evidence(item, evidence) for item in graded)
+
+
+def _graded_answer_literals(answer: str) -> list[_GradedLiteral]:
+    text = answer.replace("\u2212", "-")
+    body = "\n".join(line for line in text.splitlines() if not _VERDICT_LINE.search(line))
+    body = _CI_LEVEL.sub(" interval", body)
+    literals: list[_GradedLiteral] = []
+    for match in _PERCENT.finditer(body):
+        token = match.group(1)
+        literals.append(_GradedLiteral(float(token), _decimal_places(token)))
+    stripped = _PERCENT.sub(" ", body)
+    for match in _NUMBER.finditer(stripped):
+        token = match.group(0)
+        literals.append(_GradedLiteral(float(token), _decimal_places(token)))
+    return _dedupe_literals(literals)
+
+
+def _decimal_places(token: str) -> int:
+    core = token.lower().split("e", 1)[0]
+    if "." not in core:
+        return 0
+    return len(core.split(".", 1)[1])
+
+
+def _dedupe_literals(literals: Sequence[_GradedLiteral]) -> list[_GradedLiteral]:
+    out: list[_GradedLiteral] = []
+    for item in literals:
+        duplicate = any(
+            _graded_matches_found(item.value, kept.value, min(item.decimals, kept.decimals))
+            for kept in out
+        )
+        if not duplicate:
+            out.append(item)
+    return out
+
+
+def _tool_evidence_strings(traj: Any) -> list[str]:
+    outputs: list[str] = []
+    for call in getattr(traj, "calls", []):
+        outputs.append(_serialize_tool_result(getattr(call, "result", None)))
+        args = getattr(call, "args", None)
+        if args:
+            outputs.append(json.dumps(args, default=str))
+    return outputs
+
+
+def _serialize_tool_result(result: object) -> str:
+    if result is None:
+        return ""
+    if is_dataclass(result) and not isinstance(result, type):
+        return json.dumps(asdict(result), default=str)
+    return str(result)
+
+
+def _numbers_in(text: str) -> list[float]:
+    normalized = text.replace("\u2212", "-")
+    out: list[float] = []
+    for match in _NUMBER.finditer(normalized):
+        try:
+            out.append(float(match.group(0)))
+        except ValueError:
+            continue
+    return out
+
+
+def _literal_in_evidence(literal: _GradedLiteral, evidence: Sequence[str]) -> bool:
+    pool = [number for text in evidence for number in _numbers_in(text)]
+    return any(
+        _graded_matches_found(literal.value, found, literal.decimals) for found in pool
+    )
+
+
+def _scale_variants(value: float) -> list[float]:
+    if value == 0.0:
+        return [0.0]
+    return [value, value / 100.0, value * 100.0]
+
+
+def _graded_matches_found(stated: float, found: float, decimals: int) -> bool:
+    abs_tol = 0.5 * 10 ** (-decimals)
+    for s in _scale_variants(stated):
+        for f in _scale_variants(found):
+            scale = max(abs(s), abs(f), 1e-12)
+            if abs(s - f) <= max(_REL_TOL * scale, abs_tol):
+                return True
+    return False
+
+
+def _within_tolerance(a: float, b: float) -> bool:
+    scale = max(abs(a), abs(b), 1e-12)
+    return abs(a - b) <= _REL_TOL * scale
