@@ -159,9 +159,7 @@ def wilson(successes: int, n: int, conf: float = 0.95) -> tuple[float, float]:
     """Wilson score interval for a binomial proportion. Returns (low, high)."""
     if n <= 0 or not 0 <= successes <= n:
         raise ValueError(f"need 0 <= successes <= n, got successes={successes} n={n}")
-    low, high = proportion_confint(
-        successes, n, alpha=1 - conf, method="wilson"
-    )
+    low, high = proportion_confint(successes, n, alpha=1 - conf, method="wilson")
     return float(low), float(high)
 
 
