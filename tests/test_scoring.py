@@ -1,8 +1,7 @@
 """Eval statistics: Wilson intervals, pass@k, McNemar, and the error taxonomy.
 
 The expected intervals are checked two ways. The hand values are the acceptance
-targets. statsmodels is the independent implementation and is not used in
-production.
+targets. statsmodels is the independent check for Wilson and McNemar.
 """
 
 from __future__ import annotations

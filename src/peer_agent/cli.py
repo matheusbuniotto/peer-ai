@@ -311,7 +311,7 @@ def _add_eval_commands(sub: Any) -> None:
     eval_p.add_argument("--replay", default="fixtures/recorded.jsonl")
     eval_p.add_argument("--model", help="Run against a real model instead of replaying.")
     eval_p.add_argument("--trials", type=int, default=1)
-    eval_p.add_argument("--variants", help="Comma-separated: tools,no-tools.")
+    eval_p.add_argument("--variants", help="Comma-separated: tools,python-only,no-tools.")
     eval_p.add_argument("--concurrency", type=int, default=1)
     eval_p.add_argument("--record", help="Write live turns as a replay JSONL.")
     eval_p.add_argument("--out", help="Directory for results.json. Nested by run id.")

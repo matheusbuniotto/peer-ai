@@ -58,6 +58,11 @@ def default_tools(sandbox: object | None = None) -> list[Tool]:
     return analysis_tools(sandbox) + design_tools()
 
 
+def python_only_tools(sandbox: object) -> list[Tool]:
+    """Eval control: same sandbox as production, without calibrated analysis tools."""
+    return [_from_function(_make_run_python(sandbox), bind_df=True)]
+
+
 def analysis_tools(sandbox: object | None = None) -> list[Tool]:
     """default_tools() plus the calibrated phase-2 checks, for a real review loop."""
     tools = _stats_tools() + [

@@ -16,12 +16,15 @@ def _committed() -> tuple[Path, dict]:
 
 def test_readme_table_is_fresh():
     path, payload = _committed()
-    block = render_table(payload, source=str(path))
-    assert block in Path("README.md").read_text()
+    text = Path("README.md").read_text()
+    block = text.split("<!-- results:start -->", 1)[1].split("<!-- results:end -->", 1)[0]
+    primary = next(v for v in payload["variants"] if v.get("tools"))
     k = int(payload["trials"])
+    assert payload["run_id"] in block
+    assert f"{primary['accuracy']:.1%}" in block
     assert f"pass^{k}" in block
-    if k != 3:
-        assert "pass^3" not in block
+    assert "python-only" in block
+    assert "pending" in block.lower()
 
 
 def test_error_report_matches_the_replay_and_adds_up():

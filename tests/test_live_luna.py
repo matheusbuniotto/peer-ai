@@ -15,7 +15,7 @@ from peer_agent.evals import load_suite, promote_baseline, run_suite
 
 _PRECHANGE = "84342b0"
 _TOOLS = "openai/gpt-6-luna (tools)"
-_NO_TOOLS = "openai/gpt-6-luna (no tools)"
+_PYTHON_ONLY = "openai/gpt-6-luna (python-only)"
 
 
 def _latest_payload() -> dict:
@@ -44,7 +44,7 @@ def test_recorded_turns_are_the_luna_run():
     )
 
     def _role(label: str) -> str:
-        if label.endswith(" (no tools)"):
+        if label.endswith(" (python-only)") or label.endswith(" (no tools)"):
             return "no-tools"
         return "tools"
 
@@ -62,7 +62,7 @@ def test_recorded_turns_are_the_luna_run():
     assert len(case_ids) == 55
     for case_id in case_ids:
         assert recorded[(case_id, _TOOLS)] == {0, 1, 2}
-        assert recorded[(case_id, _NO_TOOLS)] == {0, 1, 2}
+        assert recorded[(case_id, _PYTHON_ONLY)] == {0, 1, 2}
 
 
 def test_readme_table_quotes_the_live_run():

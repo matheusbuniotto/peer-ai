@@ -53,13 +53,16 @@ from peer_agent.sim import (
     make_case,
     make_sequential_case,
 )
-from peer_agent.tools import Tool, analysis_tools
+from peer_agent.sandbox import Sandbox
+from peer_agent.tools import Tool, analysis_tools, python_only_tools
 from peer_agent.types import BY_USER, DesignSpec, Verdict
 
 _SUITE_PATH = Path("evals/suite.yaml")
 _PRICES_PATH = Path("evals/pricing.yaml")
 _TOOLS_SUFFIX = " (tools)"
 _NO_TOOLS_SUFFIX = " (no tools)"
+_PYTHON_ONLY_SUFFIX = " (python-only)"
+_VARIANT_KEYS = frozenset({"tools", "python-only", "no-tools"})
 _PROMPT_PATH = "prompt.md"
 
 _FLAW_FNS: dict[str, Flaw] = {
@@ -637,33 +640,60 @@ def _primary(variants: list[dict[str, Any]]) -> dict[str, Any]:
     return variants[0]
 
 
+def _variant_label(model: str, key: str) -> str:
+    if key == "tools":
+        return f"{model}{_TOOLS_SUFFIX}"
+    if key == "python-only":
+        return f"{model}{_PYTHON_ONLY_SUFFIX}"
+    if key == "no-tools":
+        return f"{model}{_NO_TOOLS_SUFFIX}"
+    raise ValueError(f"unknown variant {key!r}")
+
+
+def _tools_for_kind(
+    key: str, tools: list[Tool] | None, sandbox: Sandbox
+) -> list[Tool]:
+    if key == "no-tools":
+        return []
+    if key == "python-only":
+        return python_only_tools(sandbox)
+    if tools == []:
+        return []
+    return analysis_tools() if tools is None else tools
+
+
 def _variant_specs(
     replay: str | Path | None,
     model: str | None,
     tools: list[Tool] | None,
     variants: tuple[str, ...] | None,
     llm_for: Callable[[EvalCase, int], Any] | None,
-) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any]]]:
     if replay is not None:
         recorded = _load_recorded(replay)
         names = sorted({name for _, name, _ in recorded if name.endswith(_TOOLS_SUFFIX)})
         if len(names) != 1:
             raise ValueError(f"replay needs one tools variant, found {names}")
         base = names[0].removesuffix(_TOOLS_SUFFIX)
+        control = _replay_control_label(recorded, base)
+        control_key = "python-only" if control.endswith(_PYTHON_ONLY_SUFFIX) else "no-tools"
         return [
             (
                 f"{base}{_TOOLS_SUFFIX}",
-                True,
+                "tools",
                 _replay_factory(recorded, f"{base}{_TOOLS_SUFFIX}"),
             ),  # noqa: E501
-            (
-                f"{base}{_NO_TOOLS_SUFFIX}",
-                False,
-                _replay_factory(recorded, f"{base}{_NO_TOOLS_SUFFIX}"),
-            ),  # noqa: E501
+            (control, control_key, _replay_factory(recorded, control)),
         ]
     if llm_for is not None:
-        chosen = variants or (("no-tools",) if tools == [] else ("tools",))
+        if variants is not None:
+            chosen = variants
+        elif tools == []:
+            chosen = ("no-tools",)
+        elif tools is None:
+            chosen = ("tools", "python-only")
+        else:
+            chosen = ("tools",)
         return _live_specs(model or "fake", chosen, llm_for)
     if model is None:
         raise ValueError("run_suite needs either replay= or model=")
@@ -672,11 +702,21 @@ def _variant_specs(
         chosen = (
             ("no-tools",)
             if tools == []
-            else ("tools", "no-tools")
+            else ("tools", "python-only")
             if tools is None
             else ("tools",)
         )  # noqa: E501
     return _live_specs(model, chosen, lambda _ec, _trial: _live_model(model))
+
+
+def _replay_control_label(recorded: dict[tuple[str, str, int], list[Any]], base: str) -> str:
+    python = f"{base}{_PYTHON_ONLY_SUFFIX}"
+    legacy = f"{base}{_NO_TOOLS_SUFFIX}"
+    if any(name == python for _, name, _ in recorded):
+        return python
+    if any(name == legacy for _, name, _ in recorded):
+        return legacy
+    raise ValueError(f"replay needs a python-only or no-tools variant for {base}")
 
 
 def _replay_factory(
@@ -698,15 +738,11 @@ def _live_specs(
     model: str,
     chosen: tuple[str, ...],
     llm_for: Callable[[EvalCase, int], Any],
-) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
-    return [
-        (
-            f"{model}{_TOOLS_SUFFIX if name != 'no-tools' else _NO_TOOLS_SUFFIX}",
-            name != "no-tools",
-            llm_for,
-        )
-        for name in chosen
-    ]
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any]]]:
+    unknown = set(chosen) - _VARIANT_KEYS
+    if unknown:
+        raise ValueError(f"unknown variants {sorted(unknown)}")
+    return [(_variant_label(model, name), name, llm_for) for name in chosen]
 
 
 def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
@@ -735,20 +771,17 @@ def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
     case_ids = [ec.id for ec in suite]
     variant_rows: list[list[dict[str, Any]]] = []
     summaries: list[dict[str, Any]] = []
+    sandbox = Sandbox()
     try:
-        for label, uses_tools, factory in specs:
+        for label, kind, factory in specs:
             rows: list[dict[str, Any]] = []
-            tool_list = (
-                [] if not uses_tools else analysis_tools() if tools is None else tools
-            )  # noqa: E501
-            if tools == [] and uses_tools:
-                tool_list = []
+            tool_list = _tools_for_kind(kind, tools, sandbox)
             for trial in range(trials):
                 ctx = _Ctx(label, model_name, mode, trial, tool_list, prices, recorder)
                 rows.extend(_run_once(suite, factory, ctx, concurrency))
             variant_rows.append(rows)
             summaries.append(
-                _summarize(rows, case_ids, trials, label, model_name, uses_tools)
+                _summarize(rows, case_ids, trials, label, model_name, kind == "tools")
             )  # noqa: E501
     finally:
         if record_file is not None:
