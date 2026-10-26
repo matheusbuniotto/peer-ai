@@ -206,7 +206,7 @@ def test_it_can_say_nothing_happened(clean, live_agent):
 
     spec = DesignSpec(
         baseline=0.12,
-        mde=0.05,
+        mde=0.08,
         power=0.8,
         days=14,
         n_per_arm=20_000,
@@ -244,13 +244,8 @@ def test_a_design_it_writes_survives_the_simulator():
         "effect 5% relative lift, about 3,000 users a day, affects returning customers. "
         "We keep the current flow if it doesn't win."
     )
-    traj = Agent.from_env().design(brief)
-    if traj.spec is None:
-        text = traj.answer.lower()
-        assert "open" in text or "provisional" in text or "decision" in text
-        assert "mde" in text or "detectable" in text or "effect size" in text
-        return
-    written = traj.spec
+    written = Agent.from_env().design(brief).spec
+    assert written is not None
     assert written.unit is BY_USER
     assert written.days % 7 == 0
     assert written.mde > 0

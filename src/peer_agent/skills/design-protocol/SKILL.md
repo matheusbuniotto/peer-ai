@@ -11,3 +11,5 @@ description: The protocol for designing a new A/B test from a brief - size it, c
 3. Use `power_analysis` to size it, then `simulate_design` to check the
    promise actually holds before handing back a design. Name guardrail metrics
    when the brief mentions latency, errors, or revenue risk.
+4. Runtime must be a whole number of weeks — call `round_to_whole_weeks` on any
+   day count before returning a `DesignSpec`.

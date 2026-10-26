@@ -35,7 +35,7 @@ The weekly workflow (`.github/workflows/live-eval.yml`) uses the same model. It 
 
 The replay gate (`uv run peer eval --gate replay`, and the pre-commit hook `uv run peer eval --gate`) compares the recorded fixture with `evals/baseline.json` → `replay_expected`. The turns are fixed, so this catches a harness, parser, scoring, or schema regression. It does not catch a model or prompt regression.
 
-The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the suite against a model. It fails when the Wilson upper bound of trial-0 accuracy sits below the baseline accuracy, or when the trial-0 false-ship count is significantly above the baseline false-ship rate (one-sided binomial test at α = 0.05). A pull request that edits `src/peer_agent/prompt.md` or `src/peer_agent/skills/**` runs one live trial when the secrets exist, and posts a warning otherwise. It does not block a PR that has no key.
+The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the suite against a model. It fails when the Wilson upper bound of trial-0 accuracy sits below the baseline accuracy, when a case-clustered bootstrap upper bound on false-ship rate (all trials) exceeds the baseline false-ship rate, or when the same bootstrap rule fires on format-fail/crash rate vs `run_failure_rate` in `evals/baseline.json`. A pull request that edits `src/peer_agent/prompt.md` or `src/peer_agent/skills/**` runs one live trial when the secrets exist, and posts a warning otherwise. It does not block a PR that has no key.
 
 ## Results
 

@@ -8,7 +8,7 @@ treat correlated repeats as extra cases and make the interval too narrow.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Literal
@@ -49,6 +49,83 @@ def false_ship_rate(rows: Sequence[dict[str, Any]], *, trial: int = 0) -> tuple[
         1 for row in subset if row.get("verdict") == "SHIP" and row.get("truth") != "SHIP"
     )
     return k, len(subset)
+
+
+def _rows_by_case(
+    rows: Sequence[dict[str, Any]], case_key: str = "id"
+) -> dict[str, list[dict[str, Any]]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(str(row[case_key]), []).append(row)
+    return grouped
+
+
+def cluster_bootstrap_rate(  # noqa: PLR0913
+    rows: Sequence[dict[str, Any]],
+    predicate: Callable[[dict[str, Any]], bool],
+    *,
+    case_key: str = "id",
+    n_bootstrap: int = 4000,
+    seed: int = 0,
+    alpha: float = 0.05,
+) -> tuple[float, float, float]:
+    """
+    Case-bootstrap rate and one-sided upper bound at (1 - alpha).
+
+    Resamples cases with replacement and keeps all trial rows per case, so
+    correlation within a case is preserved.
+    """
+    grouped = _rows_by_case(rows, case_key)
+    if not grouped:
+        return 0.0, 0.0, 1.0
+    cases = list(grouped.keys())
+    flags = {case: [bool(predicate(row)) for row in grouped[case]] for case in cases}
+
+    def rate(case_list: list[str]) -> float:
+        flat = [flag for case in case_list for flag in flags[case]]
+        return sum(flat) / len(flat) if flat else 0.0
+
+    observed = rate(cases)
+    rng = np.random.default_rng(seed)
+    boot = np.array(
+        [
+            rate(list(rng.choice(cases, size=len(cases), replace=True)))
+            for _ in range(n_bootstrap)
+        ]
+    )
+    upper = float(np.percentile(boot, 100 * (1 - alpha)))
+    # One-sided p: share of bootstrap draws at or above the observed rate.
+    p_value = float(np.mean(boot >= observed))
+    return observed, upper, p_value
+
+
+def cluster_rate_regression(
+    rows: Sequence[dict[str, Any]],
+    baseline_rate: float,
+    predicate: Callable[[dict[str, Any]], bool],
+    *,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> tuple[bool, float, float]:
+    """
+    Fail when the cluster-bootstrap upper bound exceeds the baseline rate and
+    the observed rate is above baseline (one-sided regression guard).
+    """
+    observed, upper, _ = cluster_bootstrap_rate(rows, predicate, seed=seed, alpha=alpha)
+    base = float(baseline_rate)
+    reject = observed > base and upper > base
+    return reject, observed, upper
+
+
+def false_ship_row(row: dict[str, Any]) -> bool:
+    return row.get("verdict") == "SHIP" and row.get("truth") != "SHIP"
+
+
+def run_failure_row(row: dict[str, Any]) -> bool:
+    return row.get("error") in {
+        ErrorCategory.FORMAT_FAIL.value,
+        ErrorCategory.CRASHED.value,
+    }
 
 
 def false_ship_regression(

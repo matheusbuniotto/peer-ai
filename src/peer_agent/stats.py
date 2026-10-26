@@ -11,6 +11,7 @@ from scipy import stats as sps
 from tea_tasting.metrics.mean import MeanResult
 from tea_tasting.metrics.proportion import SampleRatioResult
 
+from peer_agent.stats_columns import require_columns
 from peer_agent.types import (
     AnalyzeResult,
     BayesianResult,
@@ -67,6 +68,7 @@ def check_srm(  # noqa: PLR0913 (each argument is one pre-registered choice)
     overall while tilting inside a segment is how Simpson's paradox arrives, and
     the global check is blind to it by construction.
     """
+    require_columns(df, by, tool="check_srm")
     overall = _split_p_value(df, ratio, control)
     per_stratum = [
         (f"{column}={level}", _split_p_value(part, ratio, control))
@@ -389,8 +391,7 @@ def scan_segments(
     80% of null datasets. Cochran's Q asks the real question — does one effect
     explain every segment? — in a single test instead of by eyeballing a scan.
     """
-    if "segment" not in df.columns:
-        raise ValueError("scan_segments needs a 'segment' column")
+    require_columns(df, ("segment",), tool="scan_segments")
     overall = analyze(df, control=control, alpha=alpha)
     parts = {
         str(segment): analyze(subset, control=control, alpha=alpha)
@@ -448,8 +449,7 @@ def check_novelty(
     days since a user's first exposure rather than on the calendar.
     """
     column = "cohort_day" if "cohort_day" in df.columns else "day"
-    if column not in df.columns:
-        raise ValueError("check_novelty needs a 'day' or 'cohort_day' column")
+    require_columns(df, (column,), tool="check_novelty")
 
     daily = [
         (_day_index(day), analyze(part, control=control, alpha=alpha))

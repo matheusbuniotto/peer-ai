@@ -79,6 +79,7 @@ def design_tools(answerer: Callable[[str], str] | None = None) -> list[Tool]:
     """Given an `answerer`, `ask` reaches a real person; without one it says so."""
     return [
         _from_function(design.power_analysis),
+        _from_function(design.round_to_whole_weeks),
         _from_function(design.simulate_design),
         _from_function(_make_ask(answerer)),
     ]

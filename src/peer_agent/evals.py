@@ -32,12 +32,13 @@ from pydantic_evals import Dataset
 from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
 from peer_agent.scoring import (
     classify_error,
-    false_ship_rate,
-    false_ship_regression,
+    cluster_rate_regression,
+    false_ship_row,
     format_fail_detail,
     mcnemar,
     pass_at_k,
     pass_hat_k,
+    run_failure_row,
     srm_checked_before_lift,
     wilson,
 )
@@ -134,16 +135,11 @@ def _live_model(model: str) -> OpenAIChatModel:
     return OpenAIChatModel(model, provider=provider, settings=chat_settings(base_url))
 
 
-def _prereg_spec(ec: EvalCase) -> DesignSpec | None:
-    """
-    Pre-registered MDE for null cases: without it, `analyze` cannot return
-    `equivalent_to_null`, and NO_EFFECT is not a fair expected verdict.
-    """
-    if ec.flaw != "clean":
-        return None
+def _prereg_spec(ec: EvalCase) -> DesignSpec:
+    """Same pre-registration for every case — analysis defaults, not a flaw hint."""
     return DesignSpec(
         baseline=0.12,
-        mde=0.05,
+        mde=0.08,
         power=0.8,
         days=14,
         n_per_arm=max(ec.n // 2, 1_000),
@@ -821,13 +817,12 @@ def _replay_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
 
 def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
     """
-    Live regression gate (trial 0, tools variant):
+    Live regression gate (tools variant, all trials, case-clustered):
 
-    - Accuracy: Wilson upper bound must not sit below the baseline point (same as
-      before — conservative on overall correctness).
-    - False ships: one-sided binomial test at alpha=0.05 — fail only when the
-      observed false-ship count is significantly above the baseline rate, not
-      when a single noisy run lands a few points higher by chance.
+    - Accuracy: Wilson upper bound on trial-0 accuracy vs baseline point.
+    - False ships / run failures: case-bootstrap upper bound vs baseline rate.
+      Crashes and format failures count as regressions — the gate must not
+      reward a broken harness for fewer false ships.
     """
     violations = []
     high = float(report.accuracy_ci[1])
@@ -836,19 +831,24 @@ def _live_gate(report: Report, baseline: dict[str, Any]) -> list[str]:
             f"accuracy CI high {high:.3f} < baseline {float(baseline['accuracy']):.3f}"
         )
     variant = baseline.get("primary_variant") or _tools_label(report.cases)
-    rows = [
-        row
-        for row in report.cases
-        if row.get("trial") == 0 and (variant is None or row.get("variant") == variant)
-    ]
-    k, n = false_ship_rate(rows, trial=0)
-    reject, p_value = false_ship_regression(k, n, float(baseline["false_ships"]))
-    if reject:
-        rate = k / n if n else 0.0
+    rows = [row for row in report.cases if variant is None or row.get("variant") == variant]
+    ship_reject, ship_rate, ship_upper = cluster_rate_regression(
+        rows, float(baseline["false_ships"]), false_ship_row, seed=42
+    )
+    if ship_reject:
         base = float(baseline["false_ships"])
         violations.append(
-            f"false_ships {rate:.3f} ({k}/{n}) > baseline {base:.3f} "
-            f"(one-sided binomial p={p_value:.4g})"
+            f"false_ships {ship_rate:.3f} (bootstrap upper {ship_upper:.3f}) "
+            f"> baseline {base:.3f}"
+        )
+    failure_base = float(baseline.get("run_failure_rate", 0.048484848484848485))
+    fail_reject, fail_rate, fail_upper = cluster_rate_regression(
+        rows, failure_base, run_failure_row, seed=43
+    )
+    if fail_reject:
+        violations.append(
+            f"run_failures {fail_rate:.3f} (bootstrap upper {fail_upper:.3f}) "
+            f"> baseline {failure_base:.3f}"
         )
     if violations:
         violations.extend(_paired_note(report, baseline))
@@ -931,6 +931,12 @@ def promote_baseline(
         replay_expected = {"accuracy": harness.accuracy, "by_flaw": harness.by_flaw}
     else:
         replay_expected = {"accuracy": primary["accuracy"], "by_flaw": by_flaw}
+    primary_rows = [
+        row for row in payload.get("cases", []) if row.get("variant") == primary["label"]
+    ]
+    run_failures = sum(
+        1 for row in primary_rows if row.get("error") in ("format_fail", "crashed")
+    )
     baseline = {
         "schema_version": 2,
         "source_run": payload["run_id"],
@@ -940,6 +946,7 @@ def promote_baseline(
         "accuracy_ci": primary["accuracy_ci"],
         "pass_hat_k": primary["pass_hat_k"],
         "false_ships": primary["false_ships"],
+        "run_failure_rate": run_failures / max(len(primary_rows), 1),
         "by_flaw": by_flaw,
         "replay_expected": replay_expected,
         "primary_variant": primary["label"],

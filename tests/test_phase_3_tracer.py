@@ -101,6 +101,7 @@ def test_the_registry_is_complete(sandbox):
         "bayesian_analyze",
         "audit_type_m_s",
         "power_analysis",
+        "round_to_whole_weeks",
         "simulate_design",
         "run_python",
         "ask",

@@ -51,8 +51,8 @@ _PROMPT = resources.files("peer_agent").joinpath("prompt.md").read_text()
 _SKILLS_DIR = Path(str(resources.files("peer_agent").joinpath("skills")))
 _REPORTS_DIR = Path("reports")
 _PREREG_PREAMBLE = (
-    "Pre-registered plan for this experiment. These choices were fixed before "
-    "anyone saw the data — follow them, and say so plainly if you depart from any."
+    "Pre-registered analysis defaults for this review. Apply them unless you "
+    "document a justified departure in the write-up."
 )
 ROWS_ARE_LOADED = (
     "The experiment rows are already loaded. The tools read them. "
@@ -80,10 +80,8 @@ def request_timeout_s() -> float:
 
 
 def openai_provider(base_url: str, api_key: str) -> OpenAIProvider:
-    import httpx
-
-    client = httpx.AsyncClient(timeout=httpx.Timeout(request_timeout_s()))
-    return OpenAIProvider(base_url=base_url, api_key=api_key, http_client=client)
+    """Provider without a custom httpx client — timeout is set on model settings."""
+    return OpenAIProvider(base_url=base_url, api_key=api_key)
 
 
 def chat_settings(base_url: str) -> OpenAIChatModelSettings:
@@ -93,9 +91,10 @@ def chat_settings(base_url: str) -> OpenAIChatModelSettings:
     compatible endpoints 500 when conversation storage stays at its default, so
     those keep `store` off.
     """
+    timeout = request_timeout_s()
     if "openrouter.ai" in base_url:
-        return OpenAIChatModelSettings()
-    return OpenAIChatModelSettings(openai_store=False)
+        return OpenAIChatModelSettings(timeout=timeout)
+    return OpenAIChatModelSettings(openai_store=False, timeout=timeout)
 
 
 _logfire_configured = False
@@ -307,6 +306,23 @@ def _redact(answer: str, invented: tuple[str, ...]) -> str:
     return answer
 
 
+def _dataframe_from_partial(partial: functools.partial) -> Any:
+    import pandas as pd
+
+    for arg in partial.args:
+        if isinstance(arg, pd.DataFrame):
+            return arg
+    return None
+
+
+def _tool_error_message(partial: functools.partial, exc: Exception) -> str:
+    frame = _dataframe_from_partial(partial)
+    if frame is not None:
+        columns = ", ".join(sorted(frame.columns))
+        return f"{exc}. Available columns: {columns}"
+    return str(exc)
+
+
 class _RecordingCall(functools.partial):
     """
     A tool call bound to its fixed leading args (e.g. the case dataframe), kept
@@ -318,10 +334,9 @@ class _RecordingCall(functools.partial):
     def __call__(self, /, **kwargs: Any) -> Any:
         try:
             result = super().__call__(**kwargs)
-        except ValueError as exc:
-            # e.g. a stats check needing a column this case doesn't have — let the
-            # model see the failure and adjust, instead of crashing the whole run.
-            raise ModelRetry(str(exc)) from exc
+        except (ValueError, KeyError) as exc:
+            # Missing columns or invalid args must return to the model, not kill the run.
+            raise ModelRetry(_tool_error_message(self, exc)) from exc
         self._calls.append(ToolCall(self._tool_name, kwargs, result))
         return result
 
@@ -425,6 +440,12 @@ class Agent:
     def _model(self, adapter: Any) -> Any:
         return self.llm if isinstance(self.llm, Model) else FunctionModel(adapter)
 
+    def _capabilities(self, *, files: bool) -> list[Any]:
+        caps: list[Any] = [Skills(_SKILLS_DIR, include=["review-protocol"])]
+        if files:
+            caps.append(_files_capability())
+        return caps
+
     def chat_agent(self, df: Any) -> PydanticAgent:
         """
         The same tool registry, prompt, and skill review() uses, bound to df the
@@ -435,10 +456,7 @@ class Agent:
             self.llm,
             tools=pai_tools,
             system_prompt=_PROMPT,
-            capabilities=[
-                Skills(_SKILLS_DIR, include=["review-protocol"]),
-                _files_capability(),
-            ],
+            capabilities=self._capabilities(files=bool(self.tools)),
         )
 
     def review(
@@ -469,10 +487,7 @@ class Agent:
             self._model(adapter),
             tools=pai_tools,
             system_prompt=_PROMPT,
-            capabilities=[
-                Skills(_SKILLS_DIR, include=["review-protocol"]),
-                _files_capability(),
-            ],
+            capabilities=self._capabilities(files=bool(self.tools)),
         )
         pai_agent.output_validator(_cite_the_toolbox(calls))
         started = time.perf_counter()
