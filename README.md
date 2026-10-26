@@ -115,6 +115,6 @@ The replay gate cannot see a prompt change, because the recorded answers do not 
 
 Peeking truth is `INVALID` because the final p-value is an optional-stopping artifact. A reader who would rather call that `EXTEND` will disagree with ten cases.
 
-There is no human-labelled LLM judge. Scoring is the match between the parsed verdict and the planted truth, plus process checks: `check_srm` before lift tools (`srm_checked_before_lift`), and `fabricated` when a numeric claim in the final answer (p-values, lifts, CI bounds, sample sizes, and other literals except 90/95/99 before “CI”) does not match any tool output within relative tolerance `1e-3` (percent/fraction and scientific notation are normalized; spelled-out numbers and ratios are not).
+There is no human-labelled LLM judge. Scoring is the match between the parsed verdict and the planted truth, plus process checks: `check_srm` before lift tools (`srm_checked_before_lift`), and `fabricated` when a numeric claim in the final answer (p-values, lifts, CI bounds, sample sizes, and other literals except 90/95/99 before “CI” or “confidence interval”) does not match any number in tool results, tool arguments, or the prereg prompt within relative tolerance `1e-3` and half the stated decimal place (percent/fraction rescaling applies; spelled-out numbers and ratios are not checked).
 
 The suite is 55 simulated cases (10 SRM, 10 novelty, 10 Simpson, 5 unplanned peeking, 5 pre-registered sequential, 10 clean, 5 outliers). It is not production traffic.

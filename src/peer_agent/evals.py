@@ -271,7 +271,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
         "error": None if error is None else error.value,
         "failure_detail": failure_detail,
         "srm_checked_before_lift": srm_checked_before_lift(traj),
-        "fabricated": trajectory_fabricated(traj),
+        "fabricated": trajectory_fabricated(traj, context=review_prompt_text(ec)),
         "latency_s": traj.latency_s,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,

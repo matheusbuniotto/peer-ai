@@ -256,3 +256,32 @@ def test_fabricated_false_when_answer_has_no_graded_numbers():
         answer="VERDICT: INVALID — broken split.",
     )
     assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_with_no_tool_outputs_and_a_stated_number():
+    traj = Trajectory(calls=[], answer="VERDICT: SHIP\nEstimated lift 12.0%.", done=True)
+    assert trajectory_fabricated(traj)
+
+
+def test_fabricated_ignores_confidence_level_before_interval_phrase():
+    result = SimpleNamespace(lift=0.559851, ci_low=0.493028, ci_high=0.629664)
+    traj = _traj_with_results(
+        Verdict.EXTEND,
+        [("analyze", result)],
+        answer=(
+            "VERDICT: EXTEND\n"
+            "Lift 55.99% with a 95% confidence interval of 49.30% to 62.97%."
+        ),
+    )
+    assert not trajectory_fabricated(traj)
+
+
+def test_fabricated_accepts_prereg_numbers_from_context():
+    result = SimpleNamespace(lift=0.05)
+    traj = _traj_with_results(
+        Verdict.NO_EFFECT,
+        [("analyze", result)],
+        answer="VERDICT: NO_EFFECT\nRegistered MDE is 5%.",
+    )
+    context = "Pre-registered analysis defaults:\nbaseline=0.12\nmde=0.05\n"
+    assert not trajectory_fabricated(traj, context=context)
