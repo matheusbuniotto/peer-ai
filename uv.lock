@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.14"
 resolution-markers = [
     "sys_platform == 'win32'",
@@ -1247,6 +1247,7 @@ dependencies = [
     { name = "pydantic-ai-harness", extra = ["skills"] },
     { name = "pyyaml" },
     { name = "scipy" },
+    { name = "statsmodels" },
     { name = "tea-tasting" },
 ]
 
@@ -1262,7 +1263,6 @@ dev = [
     { name = "prek" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "statsmodels" },
     { name = "ty" },
 ]
 
@@ -1277,6 +1277,7 @@ requires-dist = [
     { name = "pydantic-ai-harness", extras = ["skills"], specifier = ">=0.29.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "scipy", specifier = ">=1.14" },
+    { name = "statsmodels", specifier = ">=0.15.0" },
     { name = "tea-tasting", specifier = ">=0.9" },
 ]
 provides-extras = ["braintrust"]
@@ -1288,7 +1289,6 @@ dev = [
     { name = "prek", specifier = ">=0.5.2" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "statsmodels", specifier = ">=0.15.0" },
     { name = "ty", specifier = ">=0.0.78" },
 ]
 

@@ -1,8 +1,8 @@
 """Eval statistics: Wilson intervals, pass@k, McNemar, and the error taxonomy.
 
-The expected intervals are checked two ways. The hand values are the acceptance
-targets. statsmodels is the independent implementation and is not used in
-production.
+The expected intervals are checked against fixed acceptance targets and
+statsmodels `proportion_confint(method="wilson")`, which production uses via
+`peer_agent.scoring.wilson`.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def test_wilson_matches_the_hand_values_and_statsmodels():
     assert empty[0] == 0.0
     assert empty[1] == pytest.approx(0.2775, abs=1e-3)
     assert full[0] == pytest.approx(0.7225, abs=1e-3)
-    assert full[1] == 1.0
+    assert full[1] == pytest.approx(1.0)
     assert empty == pytest.approx(proportion_confint(0, 10, method="wilson"), abs=1e-12)
     assert full == pytest.approx(proportion_confint(10, 10, method="wilson"), abs=1e-12)
 

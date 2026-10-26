@@ -39,6 +39,8 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 
 ## Results
 
+Open flaw-class notes (symptoms, replay case ids, hypotheses): [`evals/FINDINGS.md`](evals/FINDINGS.md).
+
 **Pending re-promotion:** the table below is from the **2026-10-16** live run on the **previous** case set (before the `peeking` / `sequential` split and related harness changes). It is kept for history until `uv run peer baseline promote` on a fresh Luna run. `uv run peer report --write-readme` renders the table; do not edit the numbers by hand.
 
 <!-- results:start -->
@@ -47,6 +49,19 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | 19.73s | 55 |
 | openai/gpt-6-luna (no tools) | 0.0% (0.0%–6.5%) | 0.0% | 0.0% | 9.1% | — | 19.06s | 55 |
+
+### Accuracy by flaw (trial 0, `openai/gpt-6-luna (tools)`)
+
+| Flaw | n | correct | accuracy | 95% Wilson CI |
+| --- | ---: | ---: | ---: | ---: |
+| clean | 10 | 3 | 30.0% | 10.8%–60.3% |
+| novelty | 10 | 9 | 90.0% | 59.6%–98.2% |
+| outliers | 5 | 0 | 0.0% | 0.0%–43.4% |
+| peeking | 10 | 0 | 0.0% | 0.0%–27.8% |
+| simpson | 10 | 0 | 0.0% | 0.0%–27.8% |
+| srm | 10 | 10 | 100.0% | 72.2%–100.0% |
+
+Zero-accuracy flaw classes and follow-ups: [`evals/FINDINGS.md`](evals/FINDINGS.md).
 
 McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (no tools)`: b=24 (only A right), c=0 (only B right), p=1.19e-07 (exact).
 

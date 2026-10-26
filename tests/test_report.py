@@ -5,13 +5,32 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from peer_agent.report import render_errors, render_table
+from peer_agent.report import render_by_flaw_table, render_errors, render_table
 
 
 def _committed() -> tuple[Path, dict]:
     run_id = Path("results/LATEST").read_text().strip()
     path = Path("results") / run_id / "results.json"
     return path, json.loads(path.read_text())
+
+
+def test_by_flaw_table_lists_zero_accuracy_flaws_with_wilson_ci():
+    _, payload = _committed()
+    primary = next(v for v in payload["variants"] if v.get("tools"))
+    lines = render_by_flaw_table(primary)
+    text = "\n".join(lines)
+    assert "### Accuracy by flaw" in text
+    assert "| peeking | 10 | 0 | 0.0% | 0.0%–27.8% |" in text
+    assert "| simpson | 10 | 0 | 0.0% | 0.0%–27.8% |" in text
+    assert "| outliers | 5 | 0 | 0.0% | 0.0%–43.4% |" in text
+    assert "evals/FINDINGS.md" in text
+
+
+def test_render_table_includes_by_flaw_block():
+    _, payload = _committed()
+    block = render_table(payload)
+    assert "### Accuracy by flaw" in block
+    assert block.index("### Accuracy by flaw") < block.index("McNemar")
 
 
 def test_readme_table_is_fresh():
