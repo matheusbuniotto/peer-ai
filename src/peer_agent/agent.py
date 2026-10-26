@@ -495,7 +495,11 @@ class Agent:
         if question is None:
             question = f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
         if spec is not None:
-            question = f"{_PREREG_PREAMBLE}\n\n{spec}\n\n{question}"
+            from peer_agent.evals import format_prereg_for_prompt
+
+            question = (
+                f"{_PREREG_PREAMBLE}\n\n{format_prereg_for_prompt(spec)}\n\n{question}"
+            )
 
         def adapter(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             del info

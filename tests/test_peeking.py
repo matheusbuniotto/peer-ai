@@ -17,7 +17,7 @@ def test_unplanned_peeking_cases_are_invalid_and_naively_significant():
         assert built.truth.name == "INVALID"
         assert stats.analyze(built.df).p_value < 0.05
         assert "stopped_day" in built.df.attrs
-        question = _review_question(built)
+        question = _review_question()
         assert "stopped on day" not in question.lower()
         assert "0 through" not in question
 

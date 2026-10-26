@@ -35,11 +35,11 @@ The weekly workflow (`.github/workflows/live-eval.yml`) uses the same model. It 
 
 The replay gate (`uv run peer eval --gate replay`, and the pre-commit hook `uv run peer eval --gate`) compares the recorded fixture with `evals/baseline.json` → `replay_expected`. The turns are fixed, so this catches a harness, parser, scoring, or schema regression. It does not catch a model or prompt regression.
 
-The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the suite against a model. It fails when the Wilson upper bound of trial-0 accuracy sits below the baseline accuracy, when a case-clustered bootstrap upper bound on false-ship rate (all trials) exceeds the baseline false-ship rate, or when the same bootstrap rule fires on format-fail/crash rate vs `run_failure_rate` in `evals/baseline.json`. A pull request that edits `src/peer_agent/prompt.md` or `src/peer_agent/skills/**` runs one live trial when the secrets exist, and posts a warning otherwise. It does not block a PR that has no key.
+The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the suite against a model. It fails when the Wilson upper bound of trial-0 accuracy sits below the baseline accuracy, when a case-clustered bootstrap **lower** bound on false-ship rate (all trials) exceeds the baseline false-ship rate, or when the same lower-bound rule fires on format-fail/crash rate vs `run_failure_rate` in `evals/baseline.json`. A pull request that edits `src/peer_agent/prompt.md` or `src/peer_agent/skills/**` runs one live trial when the secrets exist, and posts a warning otherwise. It does not block a PR that has no key.
 
 ## Results
 
-This table is the live run of `openai/gpt-6-luna` with trials 3 in `results/LATEST`. `uv run peer report --write-readme` renders it. Do not edit the numbers by hand.
+**Pending re-promotion:** the table below is from the **2026-10-16** live run on the **previous** case set (before the `peeking` / `sequential` split and related harness changes). It is kept for history until `uv run peer baseline promote` on a fresh Luna run. `uv run peer report --write-readme` renders the table; do not edit the numbers by hand.
 
 <!-- results:start -->
 
@@ -62,7 +62,11 @@ The agent calls tools instead of inventing a p-value. SRM (binomial sample-ratio
 
 `sequential` defaults to Lan-DeMets O'Brien-Fleming spending. `method="bonferroni"` is the older rule: compare the final p-value with `alpha / looks`. That is a correction, not an alpha-spending design.
 
-Peeking cases in `evals/suite.yaml` are planted. The simulator draws a true lift of 0, looks at each cumulative day, and keeps the first day `d >= 3` with `p < 0.05`. The truth label is `INVALID`. The review prompt says the team checked daily and stopped on that day. Five `outliers` cases have lift 0; the truth is `NO_EFFECT`, and a `SHIP` on a distorted CUPED covariate is a false ship.
+**Peeking (`peeking-01..05`):** planted optional stopping with true lift 0 — the simulator keeps the first day `d >= 3` with `p < 0.05`. Truth is `INVALID` (optional-stopping artifact). The review prompt is neutral; the agent must infer an interim look from the data and prereg horizon.
+
+**Sequential (`peeking-06..10`, flaw `sequential`):** same daily data shape but a pre-registered group-sequential plan (`looks = days`). Labels come from `sequential` plus the primary metric — e.g. `SHIP` only when the OBF boundary is crossed and the primary is significantly positive. Seeds **36** and **56** are `INCONCLUSIVE` because the fixed-horizon test is significant while the planned boundary is not crossed.
+
+Five `outliers` cases have lift 0; the truth is `NO_EFFECT`, and a `SHIP` on a distorted CUPED covariate is a false ship.
 
 Verdicts are `NO_EFFECT`, `INCONCLUSIVE`, `INVALID`, `SHIP`, and `EXTEND`.
 
@@ -113,4 +117,4 @@ Peeking truth is `INVALID` because the final p-value is an optional-stopping art
 
 There is no human-labelled LLM judge. Scoring is the match between the parsed verdict and the planted truth, plus the process check that `check_srm` ran before a lift was read.
 
-The suite is 55 simulated cases (10 each of SRM, novelty, Simpson, peeking, and clean, plus 5 outliers). It is not production traffic.
+The suite is 55 simulated cases (10 SRM, 10 novelty, 10 Simpson, 5 unplanned peeking, 5 pre-registered sequential, 10 clean, 5 outliers). It is not production traffic.

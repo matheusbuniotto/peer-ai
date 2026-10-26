@@ -209,7 +209,7 @@ def test_it_can_say_nothing_happened(clean, live_agent):
         mde=0.05,
         power=0.8,
         days=14,
-        n_per_arm=20_000,
+        n_per_arm=40_000,
         unit=BY_USER,
         metric="converted",
     )

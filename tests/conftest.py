@@ -83,8 +83,8 @@ def quotes_number(traj, value, tol=0.05):
 
 @pytest.fixture
 def clean():
-    """Nothing wrong, nothing happened. The agent has to say so."""
-    return make_case(n=40_000, lift=0.0, seed=1)
+    """Null with enough power to show equivalence at the eval MDE (5%)."""
+    return make_case(n=80_000, lift=0.0, seed=1)
 
 
 @pytest.fixture

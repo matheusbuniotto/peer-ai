@@ -86,9 +86,10 @@ def design_tools(answerer: Callable[[str], str] | None = None) -> list[Tool]:
 
 
 UNANSWERED = (
-    "Nobody is available to answer that. Do not invent an answer and do not "
-    "assume one: put the question in your write-up as an open decision, and "
-    "mark anything that depends on it as provisional."
+    "Nobody is available to answer that. Do not invent an answer. If the design "
+    "protocol's conservative defaults apply, use them only with an explicit "
+    "unconfirmed-assumption note in the design output; otherwise leave the "
+    "decision open and mark dependent fields as provisional."
 )
 
 

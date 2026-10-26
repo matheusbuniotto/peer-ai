@@ -7,9 +7,7 @@ from collections.abc import Sequence
 import pandas as pd
 
 
-def require_columns(
-    df: pd.DataFrame, columns: Sequence[str], *, tool: str
-) -> None:
+def require_columns(df: pd.DataFrame, columns: Sequence[str], *, tool: str) -> None:
     missing = [column for column in columns if column not in df.columns]
     if missing:
         available = ", ".join(sorted(df.columns))

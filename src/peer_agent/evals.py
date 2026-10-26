@@ -155,6 +155,10 @@ def _prereg_spec(ec: EvalCase) -> DesignSpec:
     # 5% MDE: below the 6% planted lifts on clean-06..10 so real wins stay SHIP,
     # while null clean cases can still reach NO_EFFECT when powered.
     looks = days if ec.flaw == "sequential" else 1
+    # Per-case traffic hint (deterministic from id) so prereg text is not identical
+    # across flaws that share the same truth — without using sample size as a label.
+    digest = hashlib.sha256(ec.id.encode()).hexdigest()
+    traffic = 10_000 + int(digest[:8], 16) % 8_000
     return DesignSpec(
         baseline=0.12,
         mde=0.05,
@@ -164,11 +168,41 @@ def _prereg_spec(ec: EvalCase) -> DesignSpec:
         n_per_arm=max(ec.n // 2, 1_000),
         unit=BY_USER,
         metric="converted",
+        daily_traffic=traffic,
     )
 
 
-def _review_question(case: Case) -> str:
+def format_prereg_for_prompt(spec: DesignSpec) -> str:
+    """Pre-reg block shown to the model — omits n_per_arm (visible in the data)."""
+    parts = [
+        f"baseline={spec.baseline}",
+        f"mde={spec.mde}",
+        f"power={spec.power}",
+        f"days={spec.days}",
+        f"looks={spec.looks}",
+        f"unit={spec.unit.value}",
+        f"metric={spec.metric}",
+        f"alpha={spec.alpha}",
+    ]
+    if spec.daily_traffic is not None:
+        parts.append(f"daily_traffic={spec.daily_traffic}")
+    if spec.covariate:
+        parts.append(f"covariate={spec.covariate}")
+    if spec.if_flat:
+        parts.append(f"if_flat={spec.if_flat!r}")
+    return "Pre-registered analysis defaults:\n" + "\n".join(parts)
+
+
+def _review_question() -> str:
     return f"Review this experiment.\n\n{ROWS_ARE_LOADED}"
+
+
+def review_prompt_text(ec: EvalCase) -> str:
+    """Full user message for a suite case (preamble + prereg + question)."""
+    from peer_agent.agent import _PREREG_PREAMBLE
+
+    spec = _prereg_spec(ec)
+    return f"{_PREREG_PREAMBLE}\n\n{format_prereg_for_prompt(spec)}\n\n{_review_question()}"
 
 
 def _turns(traj: Trajectory) -> list[dict[str, Any]]:
@@ -277,7 +311,7 @@ def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
             traj = Agent(llm, tools=ctx.tools).review(
                 built,
                 spec=_prereg_spec(ec),
-                question=_review_question(built),
+                question=_review_question(),
             )  # noqa: E501
             row = _case_row(
                 ec,
