@@ -1,4 +1,4 @@
-"""Pure statistics for eval scores. numpy and scipy only, no I/O.
+"""Pure statistics for eval scores. numpy, scipy, and statsmodels only, no I/O.
 
 Accuracy for one trial is the mean of `correct`. The number reported for a
 multi-trial run is the mean of those trial means. The Wilson interval uses
@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 import numpy as np
 from scipy import stats
+from statsmodels.stats.proportion import proportion_confint
 
 from peer_agent.types import Verdict
 
@@ -158,15 +159,10 @@ def wilson(successes: int, n: int, conf: float = 0.95) -> tuple[float, float]:
     """Wilson score interval for a binomial proportion. Returns (low, high)."""
     if n <= 0 or not 0 <= successes <= n:
         raise ValueError(f"need 0 <= successes <= n, got successes={successes} n={n}")
-    z = float(stats.norm.ppf(1 - (1 - conf) / 2))
-    p = successes / n
-    z2 = z * z
-    denom = 1 + z2 / n
-    center = (p + z2 / (2 * n)) / denom
-    margin = z * np.sqrt(p * (1 - p) / n + z2 / (4 * n * n)) / denom
-    low = 0.0 if successes == 0 else float(max(0.0, center - margin))
-    high = 1.0 if successes == n else float(min(1.0, center + margin))
-    return low, high
+    low, high = proportion_confint(
+        successes, n, alpha=1 - conf, method="wilson"
+    )
+    return float(low), float(high)
 
 
 def _as_matrix(correct_matrix: np.ndarray | Sequence[Sequence[bool]]) -> np.ndarray:

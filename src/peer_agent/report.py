@@ -7,6 +7,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from statsmodels.stats.proportion import proportion_confint
+
 START = "<!-- results:start -->"
 END = "<!-- results:end -->"
 
@@ -28,6 +30,13 @@ def render_table(payload: dict[str, Any], *, source: str | None = None) -> str:
     ]
     for variant in payload["variants"]:
         lines.append(_variant_row(variant))
+    primary = next(
+        (v for v in payload["variants"] if v.get("tools")), payload["variants"][0]
+    )
+    flaw_table = render_by_flaw_table(primary)
+    if flaw_table:
+        lines.append("")
+        lines.extend(flaw_table)
     lines.append("")
     if payload.get("comparisons"):
         lines.append(_comparison_line(payload["comparisons"][0]))
@@ -35,14 +44,39 @@ def render_table(payload: dict[str, Any], *, source: str | None = None) -> str:
     if source:
         lines.append(f"Source: [`{source}`]({source}).")
         lines.append("")
-    primary = next(
-        (v for v in payload["variants"] if v.get("tools")), payload["variants"][0]
-    )  # noqa: E501
     lines.append(
         f"Model `{primary['model']}`, run `{payload['run_id']}`, "
         f"{payload['generated_at'][:10]}, git `{payload['git_sha']}`."
     )
     return "\n".join(lines)
+
+
+def render_by_flaw_table(variant: dict[str, Any]) -> list[str]:
+    """Trial-0 accuracy by flaw for one variant, with Wilson intervals from statsmodels."""
+    by_flaw = variant.get("by_flaw")
+    if not by_flaw:
+        return []
+    lines = [
+        f"### Accuracy by flaw (trial 0, `{variant['label']}`)",
+        "",
+        "| Flaw | n | correct | accuracy | 95% Wilson CI |",
+        "| --- | ---: | ---: | ---: | ---: |",
+    ]
+    for flaw in sorted(by_flaw):
+        stats = by_flaw[flaw]
+        n = int(stats["n"])
+        correct = int(round(float(stats["acc"]) * n))
+        low, high = proportion_confint(correct, n, alpha=0.05, method="wilson")
+        lines.append(
+            f"| {flaw} | {n} | {correct} | {_pct(float(stats['acc']))} "
+            f"| {_pct(float(low))}–{_pct(float(high))} |"
+        )
+    lines.append("")
+    lines.append(
+        "Zero-accuracy flaw classes and follow-ups: "
+        "[`evals/FINDINGS.md`](evals/FINDINGS.md)."
+    )
+    return lines
 
 
 def splice_readme(text: str, block: str) -> str:

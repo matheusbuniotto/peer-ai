@@ -12,6 +12,7 @@ dependencies = [
     "tea-tasting>=0.9",
     "pyarrow>=18.0",
     "scipy>=1.14",
+    "statsmodels>=0.15.0",
     "pydantic-ai-harness[skills]>=0.29.0",
     "pyyaml>=6.0",
 ]
@@ -24,7 +25,6 @@ dev = [
     "pytest>=8.3",
     "prek>=0.5.2",
     "ty>=0.0.78",
-    "statsmodels>=0.15.0",
     "pytest-cov>=7.1.0",
     "jsonschema>=4.26",
     "duckdb>=1.1",
