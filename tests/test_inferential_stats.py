@@ -54,7 +54,8 @@ def test_bayesian_posterior_means_match_beta_moments():
     result = stats.bayesian_analyze(df, n_samples=500_000, seed=3)
     assert abs(result.control_rate - p_c) < 1e-12
     assert abs(result.treatment_rate - p_t) < 1e-12
-    assert abs(result.expected_rel_lift - (post_t.mean() - post_c.mean()) / post_c.mean()) < 0.01
+    analytic_rel = (post_t.mean() - post_c.mean()) / post_c.mean()
+    assert abs(result.expected_rel_lift - analytic_rel) < 0.01
 
 
 @pytest.mark.parametrize(
@@ -95,8 +96,14 @@ def test_z_test_from_statsmodels_aligns_with_analyze():
     z_stat, p_sm = proportions_ztest(count, nobs)
     freq = stats.analyze(df)
     assert abs(p_sm - freq.p_value) < 0.001
-    assert abs(z_stat) == pytest.approx(abs((k_t / n_t - k_c / n_c) / np.sqrt(
-        ((k_c + k_t) / (n_c + n_t))
-        * (1 - (k_c + k_t) / (n_c + n_t))
-        * (1 / n_c + 1 / n_t)
-    )), rel=1e-6)
+    assert abs(z_stat) == pytest.approx(
+        abs(
+            (k_t / n_t - k_c / n_c)
+            / np.sqrt(
+                ((k_c + k_t) / (n_c + n_t))
+                * (1 - (k_c + k_t) / (n_c + n_t))
+                * (1 / n_c + 1 / n_t)
+            )
+        ),
+        rel=1e-6,
+    )
