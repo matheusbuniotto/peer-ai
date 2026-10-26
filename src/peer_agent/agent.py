@@ -402,7 +402,26 @@ class Usage:
 
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cache_read_tokens: int | None = None
+    cache_write_tokens: int | None = None
     requests: int | None = None
+
+
+def turn_usage_dict(usage: Any) -> dict[str, int]:
+    return {
+        "input_tokens": int(getattr(usage, "input_tokens", 0) or 0),
+        "output_tokens": int(getattr(usage, "output_tokens", 0) or 0),
+        "cache_read_tokens": int(getattr(usage, "cache_read_tokens", 0) or 0),
+        "cache_write_tokens": int(getattr(usage, "cache_write_tokens", 0) or 0),
+    }
+
+
+def usage_turns_from_result(result: Any) -> list[dict[str, int]]:
+    turns: list[dict[str, int]] = []
+    for message in result.all_messages():
+        if isinstance(message, ModelResponse):
+            turns.append(turn_usage_dict(message.usage))
+    return turns
 
 
 def _read_usage(result: Any) -> Usage | None:
@@ -413,6 +432,8 @@ def _read_usage(result: Any) -> Usage | None:
     return Usage(
         input_tokens=getattr(raw, "input_tokens", None),
         output_tokens=getattr(raw, "output_tokens", None),
+        cache_read_tokens=getattr(raw, "cache_read_tokens", None),
+        cache_write_tokens=getattr(raw, "cache_write_tokens", None),
         requests=getattr(raw, "requests", None),
     )
 
@@ -425,6 +446,7 @@ class Trajectory:
     verdict: Verdict | None = None
     spec: DesignSpec | None = None
     usage: Usage | None = None
+    usage_turns: list[dict[str, int]] = field(default_factory=list)
     latency_s: float = 0.0
     error: str | None = None
 
@@ -548,6 +570,7 @@ class Agent:
             verdict=verdict,
             spec=spec,
             usage=_read_usage(result),
+            usage_turns=usage_turns_from_result(result),
             latency_s=latency_s,
             error=_verdict_error(answer, verdict),
         )
@@ -588,9 +611,15 @@ class Agent:
         latency_s = time.perf_counter() - started
         usage = _read_usage(result)
 
+        turn_usage = usage_turns_from_result(result)
         if isinstance(result.output, DesignSpec):
             traj = Trajectory(
-                calls=calls, spec=result.output, done=True, usage=usage, latency_s=latency_s
+                calls=calls,
+                spec=result.output,
+                done=True,
+                usage=usage,
+                usage_turns=turn_usage,
+                latency_s=latency_s,
             )
         else:
             traj = Trajectory(
@@ -598,6 +627,7 @@ class Agent:
                 answer=str(result.output),
                 done=True,
                 usage=usage,
+                usage_turns=turn_usage,
                 latency_s=latency_s,
             )
         _log_trajectory("design", traj)

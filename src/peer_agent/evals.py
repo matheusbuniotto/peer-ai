@@ -29,7 +29,14 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
-from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
+from peer_agent.agent import (
+    ROWS_ARE_LOADED,
+    Agent,
+    Trajectory,
+    chat_settings,
+    json_default,
+    turn_usage_dict,
+)
 from peer_agent.scoring import (
     classify_error,
     cluster_rate_regression,
@@ -131,13 +138,13 @@ class _ReplayLLM:
         return [(name, args) for name, args in turn]
 
 
-def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], list[Any]]:
-    recorded: dict[tuple[str, str, int], list[Any]] = {}
+def _load_recorded(path: str | Path) -> dict[tuple[str, str, int], dict[str, Any]]:
+    recorded: dict[tuple[str, str, int], dict[str, Any]] = {}
     for line in Path(path).read_text().splitlines():
         if not line.strip():
             continue
         row = json.loads(line)
-        recorded[(row["case_id"], row["model"], int(row.get("trial", 0)))] = row["turns"]
+        recorded[(row["case_id"], row["model"], int(row.get("trial", 0)))] = row
     return recorded
 
 
@@ -239,10 +246,45 @@ def _cost(
     ) / million
 
 
-def _usage_tokens(traj: Trajectory, mode: str) -> tuple[int | None, int | None]:
-    if mode == "replay" or traj.usage is None:
-        return None, None
-    return traj.usage.input_tokens, traj.usage.output_tokens
+def _sum_turn_usage(usage_turns: list[dict[str, Any]]) -> tuple[int, int]:
+    input_tokens = sum(int(turn.get("input_tokens", 0) or 0) for turn in usage_turns)
+    output_tokens = sum(int(turn.get("output_tokens", 0) or 0) for turn in usage_turns)
+    return input_tokens, output_tokens
+
+
+def _case_usage(
+    traj: Trajectory,
+    mode: str,
+    recorded_row: dict[str, Any] | None,
+) -> tuple[int | None, int | None, str]:
+    if mode == "live":
+        if traj.usage is None:
+            return None, None, "live"
+        return traj.usage.input_tokens, traj.usage.output_tokens, "live"
+    usage_turns = (recorded_row or {}).get("usage")
+    if usage_turns:
+        input_tokens, output_tokens = _sum_turn_usage(usage_turns)
+        return input_tokens, output_tokens, "recorded"
+    return None, None, "missing"
+
+
+def _variant_usage_source(mode: str, sources: list[str]) -> str:
+    if mode == "live":
+        return "live"
+    unique = set(sources)
+    if len(unique) == 1:
+        return next(iter(unique))
+    if not unique or unique == {"missing"}:
+        return "missing"
+    return "mixed"
+
+
+def _recording_usage(traj: Trajectory) -> list[dict[str, int]] | None:
+    if traj.usage_turns:
+        return traj.usage_turns
+    if traj.usage is None:
+        return None
+    return [turn_usage_dict(traj.usage)]
 
 
 def _case_row(  # noqa: PLR0913 (one field group for a case row)
@@ -254,9 +296,10 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
     trial: int,
     mode: str,
     prices: dict[str, dict[str, float]],
+    recorded_row: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     error = classify_error(ec, traj)
-    input_tokens, output_tokens = _usage_tokens(traj, mode)
+    input_tokens, output_tokens, usage_source = _case_usage(traj, mode, recorded_row)
     failure_detail = format_fail_detail(traj) if error is not None else None
     row: dict[str, Any] = {
         "id": ec.id,
@@ -273,6 +316,7 @@ def _case_row(  # noqa: PLR0913 (one field group for a case row)
         "latency_s": traj.latency_s,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
+        "usage_source": usage_source,
         "trajectory": _turns(traj),
     }
     row["cost_usd"] = _cost(model, row, prices)
@@ -299,10 +343,14 @@ class _Ctx:
     tools: list[Tool]
     prices: dict[str, dict[str, float]]
     recorder: Callable[[dict[str, Any]], None] | None
+    recorded: dict[tuple[str, str, int], dict[str, Any]] | None = None
 
 
 def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
     started = time.perf_counter()
+    recorded_row = None
+    if ctx.recorded is not None:
+        recorded_row = ctx.recorded.get((ec.id, ctx.label, ctx.trial))
     try:
         built = ec.build()
         with logfire.span(
@@ -321,6 +369,7 @@ def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
                 trial=ctx.trial,
                 mode=ctx.mode,
                 prices=ctx.prices,  # noqa: E501
+                recorded_row=recorded_row,
             )
             _annotate(span, row)
     except Exception as exc:
@@ -337,16 +386,19 @@ def _one_case(ec: EvalCase, llm: Any, ctx: _Ctx) -> dict[str, Any]:
             trial=ctx.trial,
             mode=ctx.mode,
             prices=ctx.prices,  # noqa: E501
+            recorded_row=recorded_row,
         )
     if ctx.recorder is not None:
-        ctx.recorder(
-            {
-                "case_id": ec.id,
-                "model": ctx.label,
-                "trial": ctx.trial,
-                "turns": _replay_turns(traj),
-            }  # noqa: E501
-        )
+        payload: dict[str, Any] = {
+            "case_id": ec.id,
+            "model": ctx.label,
+            "trial": ctx.trial,
+            "turns": _replay_turns(traj),
+        }
+        usage = _recording_usage(traj)
+        if usage is not None:
+            payload["usage"] = usage
+        ctx.recorder(payload)
     return row
 
 
@@ -412,6 +464,7 @@ def _summarize(  # noqa: PLR0913, PLR0917
     label: str,
     model: str,
     tools: bool,
+    mode: str,
 ) -> dict[str, Any]:
     by_trial = []
     for trial in range(trials):
@@ -420,13 +473,21 @@ def _summarize(  # noqa: PLR0913, PLR0917
     trial0 = [row for row in rows if row["trial"] == 0]
     hits = sum(bool(row["correct"]) for row in trial0)
     latency = np.asarray([row["latency_s"] for row in rows], dtype=float)
-    tokens_in = [row["input_tokens"] for row in rows if row["input_tokens"] is not None]
-    tokens_out = [row["output_tokens"] for row in rows if row["output_tokens"] is not None]
-    costs = [row["cost_usd"] for row in rows if row["cost_usd"] is not None]
+    billable = [
+        row
+        for row in rows
+        if row["usage_source"] in {"live", "recorded"}
+        and row["input_tokens"] is not None
+        and row["output_tokens"] is not None
+    ]
+    tokens_in = [row["input_tokens"] for row in billable]
+    tokens_out = [row["output_tokens"] for row in billable]
+    costs = [row["cost_usd"] for row in billable if row["cost_usd"] is not None]
     missing_usage = sum(
         1 for row in rows if row["input_tokens"] is None or row["output_tokens"] is None
     )
     total_cost = float(sum(costs)) if costs else None
+    usage_source = _variant_usage_source(mode, [row["usage_source"] for row in rows])
     matrix = _matrix(rows, case_ids, trials)
     return {
         "label": label,
@@ -450,6 +511,7 @@ def _summarize(  # noqa: PLR0913, PLR0917
             "total": total_cost,
             "per_case_mean": None if not costs else total_cost / len(costs),
             "missing_rows": missing_usage,
+            "usage_source": usage_source,
         },  # noqa: E501
         "latency_s": {
             "p50": float(np.percentile(latency, 50)),
@@ -459,6 +521,7 @@ def _summarize(  # noqa: PLR0913, PLR0917
             "input": int(sum(tokens_in)) if tokens_in else None,
             "output": int(sum(tokens_out)) if tokens_out else None,
             "missing_rows": missing_usage,
+            "usage_source": usage_source,
         },
     }
 
@@ -581,6 +644,7 @@ _PARQUET_COLUMNS = (
     "latency_s",
     "input_tokens",
     "output_tokens",
+    "usage_source",
     "cost_usd",
     "failure_detail",
 )
@@ -680,11 +744,11 @@ def _variant_specs(
 
 
 def _replay_factory(
-    recorded: dict[tuple[str, str, int], list[Any]], label: str
+    recorded: dict[tuple[str, str, int], dict[str, Any]], label: str
 ) -> Callable[[EvalCase, int], Any]:  # noqa: E501
     def factory(ec: EvalCase, trial: int) -> _ReplayLLM:
         try:
-            turns = recorded[(ec.id, label, trial)]
+            turns = recorded[(ec.id, label, trial)]["turns"]
         except KeyError as exc:
             raise KeyError(
                 f"replay has no turns for {ec.id} trial {trial} ({label})"
@@ -727,7 +791,8 @@ def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
     if trials < 1:
         raise ValueError("trials must be >= 1")
     specs = _variant_specs(replay, model, tools, variants, llm_for)
-    prices = {} if replay is not None else load_prices()
+    recorded = _load_recorded(replay) if replay is not None else None
+    prices = load_prices()
     mode = "replay" if replay is not None else "live"
     when = datetime.now(UTC)
     model_name = _model_of(specs[0][0])
@@ -744,11 +809,13 @@ def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
             if tools == [] and uses_tools:
                 tool_list = []
             for trial in range(trials):
-                ctx = _Ctx(label, model_name, mode, trial, tool_list, prices, recorder)
+                ctx = _Ctx(
+                    label, model_name, mode, trial, tool_list, prices, recorder, recorded
+                )
                 rows.extend(_run_once(suite, factory, ctx, concurrency))
             variant_rows.append(rows)
             summaries.append(
-                _summarize(rows, case_ids, trials, label, model_name, uses_tools)
+                _summarize(rows, case_ids, trials, label, model_name, uses_tools, mode)
             )  # noqa: E501
     finally:
         if record_file is not None:

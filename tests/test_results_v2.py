@@ -22,11 +22,14 @@ def test_a_replay_validates_and_does_not_invent_a_cost(tmp_path):
     assert payload["mode"] == "replay"
     assert payload["schema_version"] == 2
     for case in payload["cases"]:
+        assert case["usage_source"] == "missing"
         assert case["input_tokens"] is None
         assert case["output_tokens"] is None
         assert case["cost_usd"] is None
         assert case["latency_s"] >= 0
     for variant in payload["variants"]:
+        assert variant["tokens"]["usage_source"] == "missing"
+        assert variant["cost_usd"]["usage_source"] == "missing"
         assert variant["tokens"]["input"] is None
         assert variant["tokens"]["missing_rows"] == len(
             [row for row in payload["cases"] if row["variant"] == variant["label"]]
