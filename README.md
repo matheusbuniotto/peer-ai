@@ -48,7 +48,7 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 | openai/gpt-6-luna (tools) | 41.8% (28.1%–53.2%) | 38.2% | 24.2% | 2.4% | — | 19.73s | 55 |
 | openai/gpt-6-luna (python-only) | _pending live run_ | — | — | — | — | — | — |
 
-McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (python-only)`: pending live run (replay harness uses the python-only variant; scores above are from the 2026-10-16 tools arm only).
+McNemar `openai/gpt-6-luna (tools)` vs `openai/gpt-6-luna (python-only)`: pending live run. Recorded replay scores the tools arm only; `fixtures/recorded.jsonl` still holds legacy `(no tools)` turns and is not relabeled as python-only.
 
 Source: [`results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json`](results/2026-10-16T01-06-57Z_openai-gpt-6-luna_1264920/results.json).
 

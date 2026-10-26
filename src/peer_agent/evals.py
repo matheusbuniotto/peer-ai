@@ -672,29 +672,46 @@ def _tools_for_kind(key: str, tools: list[Tool] | None, sandbox: Sandbox) -> lis
     return analysis_tools() if tools is None else tools
 
 
+def _recorded_label(recorded: dict[tuple[str, str, int], list[Any]], label: str) -> bool:
+    return any(name == label for _, name, _ in recorded)
+
+
+def _replay_variant_specs(
+    recorded: dict[tuple[str, str, int], list[Any]],
+    base: str,
+    variants: tuple[str, ...] | None,
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any] | None]]:
+    specs: list[tuple[str, str, Callable[[EvalCase, int], Any] | None]] = []
+    for key in _live_variant_keys(None, variants):
+        if key == "tools":
+            label = f"{base}{_TOOLS_SUFFIX}"
+            specs.append((label, key, _replay_factory(recorded, label)))
+        elif key == "python-only":
+            label = f"{base}{_PYTHON_ONLY_SUFFIX}"
+            if _recorded_label(recorded, label):
+                specs.append((label, key, _replay_factory(recorded, label)))
+            else:
+                specs.append((label, key, None))
+        elif key == "no-tools":
+            label = f"{base}{_NO_TOOLS_SUFFIX}"
+            specs.append((label, key, _replay_factory(recorded, label)))
+    return specs
+
+
 def _variant_specs(
     replay: str | Path | None,
     model: str | None,
     tools: list[Tool] | None,
     variants: tuple[str, ...] | None,
     llm_for: Callable[[EvalCase, int], Any] | None,
-) -> list[tuple[str, str, Callable[[EvalCase, int], Any]]]:
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any] | None]]:
     if replay is not None:
         recorded = _load_recorded(replay)
         names = sorted({name for _, name, _ in recorded if name.endswith(_TOOLS_SUFFIX)})
         if len(names) != 1:
             raise ValueError(f"replay needs one tools variant, found {names}")
         base = names[0].removesuffix(_TOOLS_SUFFIX)
-        control = _replay_control_label(recorded, base)
-        control_key = "python-only" if control.endswith(_PYTHON_ONLY_SUFFIX) else "no-tools"
-        return [
-            (
-                f"{base}{_TOOLS_SUFFIX}",
-                "tools",
-                _replay_factory(recorded, f"{base}{_TOOLS_SUFFIX}"),
-            ),  # noqa: E501
-            (control, control_key, _replay_factory(recorded, control)),
-        ]
+        return _replay_variant_specs(recorded, base, variants)
     if llm_for is not None:
         return _live_specs(model or "fake", _live_variant_keys(tools, variants), llm_for)
     if model is None:
@@ -704,16 +721,29 @@ def _variant_specs(
     )
 
 
-def _replay_control_label(
-    recorded: dict[tuple[str, str, int], list[Any]], base: str
-) -> str:
-    python = f"{base}{_PYTHON_ONLY_SUFFIX}"
-    legacy = f"{base}{_NO_TOOLS_SUFFIX}"
-    if any(name == python for _, name, _ in recorded):
-        return python
-    if any(name == legacy for _, name, _ in recorded):
-        return legacy
-    raise ValueError(f"replay needs a python-only or no-tools variant for {base}")
+def _pending_variant_summary(label: str, model: str) -> dict[str, Any]:
+    return {
+        "label": label,
+        "model": model,
+        "tools": False,
+        "pending": True,
+        "pending_reason": (
+            "No recorded turns for this variant; run a live eval to score it."
+        ),
+        "accuracy": None,
+        "accuracy_ci": None,
+        "accuracy_by_trial": [],
+        "pass_at_k": None,
+        "pass_hat_k": None,
+        "false_ships": None,
+        "false_blocks": None,
+        "by_flaw": {},
+        "errors": {},
+        "process": {"srm_checked_before_lift": None},
+        "cost_usd": {"total": None, "per_case_mean": None, "missing_rows": 0},
+        "latency_s": {"p50": None, "p95": None},
+        "tokens": {"input": None, "output": None, "missing_rows": 0},
+    }
 
 
 def _replay_factory(
@@ -771,6 +801,10 @@ def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
     sandbox = Sandbox()
     try:
         for label, kind, factory in specs:
+            if factory is None:
+                variant_rows.append([])
+                summaries.append(_pending_variant_summary(label, model_name))
+                continue
             rows: list[dict[str, Any]] = []
             tool_list = _tools_for_kind(kind, tools, sandbox)
             for trial in range(trials):
@@ -830,16 +864,25 @@ def _finish(  # noqa: PLR0913, PLR0917 (assembles one report)
     cases = [row for rows in variant_rows for row in rows]
     comparisons = []
     if len(summaries) >= 2:
-        comparisons.append(
-            _compare(
-                summaries[0],
-                summaries[1],
-                variant_rows[0],
-                variant_rows[1],
-                case_ids,
-                trials,
+        if summaries[1].get("pending"):
+            comparisons.append(
+                {
+                    "a": summaries[0]["label"],
+                    "b": summaries[1]["label"],
+                    "pending": True,
+                }
             )
-        )  # noqa: E501
+        else:
+            comparisons.append(
+                _compare(
+                    summaries[0],
+                    summaries[1],
+                    variant_rows[0],
+                    variant_rows[1],
+                    case_ids,
+                    trials,
+                )
+            )  # noqa: E501
     digest = Path(suite_path or _SUITE_PATH)
     report = Report(
         accuracy=primary["accuracy"],

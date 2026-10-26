@@ -89,6 +89,8 @@ def render_errors(payload: dict[str, Any]) -> str:
 
 
 def _variant_row(variant: dict[str, Any]) -> str:
+    if variant.get("pending"):
+        return f"| {variant['label']} | _not recorded_ | — | — | — | — | — | — |"
     low, high = variant["accuracy_ci"]
     n = sum(int(stats["n"]) for stats in variant["by_flaw"].values())
     cost = variant["cost_usd"]["per_case_mean"]

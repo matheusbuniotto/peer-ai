@@ -18,6 +18,16 @@ def test_tools_for_kind_python_only_uses_the_sandbox():
     assert tools[0].name == "run_python"
 
 
+def test_replay_marks_python_only_pending_without_recorded_turns(tmp_path):
+    from peer_agent.evals import load_suite
+
+    report = run_suite(load_suite()[:1], replay="fixtures/recorded.jsonl", out=tmp_path)
+    assert len(report.cases) == 1
+    pending = next(v for v in report.variants if v["label"].endswith(" (python-only)"))
+    assert pending["pending"]
+    assert report.comparisons[0]["pending"]
+
+
 def test_default_live_variants_include_python_only(tmp_path):
     from peer_agent.evals import load_suite
 
