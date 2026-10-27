@@ -30,6 +30,7 @@ from pydantic_evals import Case as EvalsCase
 from pydantic_evals import Dataset
 
 from peer_agent.agent import ROWS_ARE_LOADED, Agent, Trajectory, chat_settings, json_default
+from peer_agent.sandbox import Sandbox
 from peer_agent.scoring import (
     classify_error,
     cluster_rate_regression,
@@ -53,13 +54,15 @@ from peer_agent.sim import (
     make_case,
     make_sequential_case,
 )
-from peer_agent.tools import Tool, analysis_tools
+from peer_agent.tools import Tool, analysis_tools, python_only_tools
 from peer_agent.types import BY_USER, DesignSpec, Verdict
 
 _SUITE_PATH = Path("evals/suite.yaml")
 _PRICES_PATH = Path("evals/pricing.yaml")
 _TOOLS_SUFFIX = " (tools)"
 _NO_TOOLS_SUFFIX = " (no tools)"
+_PYTHON_ONLY_SUFFIX = " (python-only)"
+_VARIANT_KEYS = frozenset({"tools", "python-only", "no-tools"})
 _PROMPT_PATH = "prompt.md"
 
 _FLAW_FNS: dict[str, Flaw] = {
@@ -637,46 +640,110 @@ def _primary(variants: list[dict[str, Any]]) -> dict[str, Any]:
     return variants[0]
 
 
+def _variant_label(model: str, key: str) -> str:
+    if key == "tools":
+        return f"{model}{_TOOLS_SUFFIX}"
+    if key == "python-only":
+        return f"{model}{_PYTHON_ONLY_SUFFIX}"
+    if key == "no-tools":
+        return f"{model}{_NO_TOOLS_SUFFIX}"
+    raise ValueError(f"unknown variant {key!r}")
+
+
+def _live_variant_keys(
+    tools: list[Tool] | None, variants: tuple[str, ...] | None
+) -> tuple[str, ...]:
+    if variants is not None:
+        return variants
+    if tools == []:
+        return ("no-tools",)
+    if tools is None:
+        return ("tools", "python-only")
+    return ("tools",)
+
+
+def _tools_for_kind(key: str, tools: list[Tool] | None, sandbox: Sandbox) -> list[Tool]:
+    if key == "no-tools":
+        return []
+    if key == "python-only":
+        return python_only_tools(sandbox)
+    if tools == []:
+        return []
+    return analysis_tools() if tools is None else tools
+
+
+def _recorded_label(recorded: dict[tuple[str, str, int], list[Any]], label: str) -> bool:
+    return any(name == label for _, name, _ in recorded)
+
+
+def _replay_variant_specs(
+    recorded: dict[tuple[str, str, int], list[Any]],
+    base: str,
+    variants: tuple[str, ...] | None,
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any] | None]]:
+    specs: list[tuple[str, str, Callable[[EvalCase, int], Any] | None]] = []
+    for key in _live_variant_keys(None, variants):
+        if key == "tools":
+            label = f"{base}{_TOOLS_SUFFIX}"
+            specs.append((label, key, _replay_factory(recorded, label)))
+        elif key == "python-only":
+            label = f"{base}{_PYTHON_ONLY_SUFFIX}"
+            if _recorded_label(recorded, label):
+                specs.append((label, key, _replay_factory(recorded, label)))
+            else:
+                specs.append((label, key, None))
+        elif key == "no-tools":
+            label = f"{base}{_NO_TOOLS_SUFFIX}"
+            specs.append((label, key, _replay_factory(recorded, label)))
+    return specs
+
+
 def _variant_specs(
     replay: str | Path | None,
     model: str | None,
     tools: list[Tool] | None,
     variants: tuple[str, ...] | None,
     llm_for: Callable[[EvalCase, int], Any] | None,
-) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any] | None]]:
     if replay is not None:
         recorded = _load_recorded(replay)
         names = sorted({name for _, name, _ in recorded if name.endswith(_TOOLS_SUFFIX)})
         if len(names) != 1:
             raise ValueError(f"replay needs one tools variant, found {names}")
         base = names[0].removesuffix(_TOOLS_SUFFIX)
-        return [
-            (
-                f"{base}{_TOOLS_SUFFIX}",
-                True,
-                _replay_factory(recorded, f"{base}{_TOOLS_SUFFIX}"),
-            ),  # noqa: E501
-            (
-                f"{base}{_NO_TOOLS_SUFFIX}",
-                False,
-                _replay_factory(recorded, f"{base}{_NO_TOOLS_SUFFIX}"),
-            ),  # noqa: E501
-        ]
+        return _replay_variant_specs(recorded, base, variants)
     if llm_for is not None:
-        chosen = variants or (("no-tools",) if tools == [] else ("tools",))
-        return _live_specs(model or "fake", chosen, llm_for)
+        return _live_specs(model or "fake", _live_variant_keys(tools, variants), llm_for)
     if model is None:
         raise ValueError("run_suite needs either replay= or model=")
-    chosen = variants
-    if chosen is None:
-        chosen = (
-            ("no-tools",)
-            if tools == []
-            else ("tools", "no-tools")
-            if tools is None
-            else ("tools",)
-        )  # noqa: E501
-    return _live_specs(model, chosen, lambda _ec, _trial: _live_model(model))
+    return _live_specs(
+        model, _live_variant_keys(tools, variants), lambda _ec, _trial: _live_model(model)
+    )
+
+
+def _pending_variant_summary(label: str, model: str) -> dict[str, Any]:
+    return {
+        "label": label,
+        "model": model,
+        "tools": False,
+        "pending": True,
+        "pending_reason": (
+            "No recorded turns for this variant; run a live eval to score it."
+        ),
+        "accuracy": None,
+        "accuracy_ci": None,
+        "accuracy_by_trial": [],
+        "pass_at_k": None,
+        "pass_hat_k": None,
+        "false_ships": None,
+        "false_blocks": None,
+        "by_flaw": {},
+        "errors": {},
+        "process": {"srm_checked_before_lift": None},
+        "cost_usd": {"total": None, "per_case_mean": None, "missing_rows": 0},
+        "latency_s": {"p50": None, "p95": None},
+        "tokens": {"input": None, "output": None, "missing_rows": 0},
+    }
 
 
 def _replay_factory(
@@ -698,15 +765,11 @@ def _live_specs(
     model: str,
     chosen: tuple[str, ...],
     llm_for: Callable[[EvalCase, int], Any],
-) -> list[tuple[str, bool, Callable[[EvalCase, int], Any]]]:
-    return [
-        (
-            f"{model}{_TOOLS_SUFFIX if name != 'no-tools' else _NO_TOOLS_SUFFIX}",
-            name != "no-tools",
-            llm_for,
-        )
-        for name in chosen
-    ]
+) -> list[tuple[str, str, Callable[[EvalCase, int], Any]]]:
+    unknown = set(chosen) - _VARIANT_KEYS
+    if unknown:
+        raise ValueError(f"unknown variants {sorted(unknown)}")
+    return [(_variant_label(model, name), name, llm_for) for name in chosen]
 
 
 def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
@@ -735,20 +798,21 @@ def run_suite(  # noqa: PLR0913 (the CLI flags are the arguments)
     case_ids = [ec.id for ec in suite]
     variant_rows: list[list[dict[str, Any]]] = []
     summaries: list[dict[str, Any]] = []
+    sandbox = Sandbox()
     try:
-        for label, uses_tools, factory in specs:
+        for label, kind, factory in specs:
+            if factory is None:
+                variant_rows.append([])
+                summaries.append(_pending_variant_summary(label, model_name))
+                continue
             rows: list[dict[str, Any]] = []
-            tool_list = (
-                [] if not uses_tools else analysis_tools() if tools is None else tools
-            )  # noqa: E501
-            if tools == [] and uses_tools:
-                tool_list = []
+            tool_list = _tools_for_kind(kind, tools, sandbox)
             for trial in range(trials):
                 ctx = _Ctx(label, model_name, mode, trial, tool_list, prices, recorder)
                 rows.extend(_run_once(suite, factory, ctx, concurrency))
             variant_rows.append(rows)
             summaries.append(
-                _summarize(rows, case_ids, trials, label, model_name, uses_tools)
+                _summarize(rows, case_ids, trials, label, model_name, kind == "tools")
             )  # noqa: E501
     finally:
         if record_file is not None:
@@ -800,16 +864,25 @@ def _finish(  # noqa: PLR0913, PLR0917 (assembles one report)
     cases = [row for rows in variant_rows for row in rows]
     comparisons = []
     if len(summaries) >= 2:
-        comparisons.append(
-            _compare(
-                summaries[0],
-                summaries[1],
-                variant_rows[0],
-                variant_rows[1],
-                case_ids,
-                trials,
+        if summaries[1].get("pending"):
+            comparisons.append(
+                {
+                    "a": summaries[0]["label"],
+                    "b": summaries[1]["label"],
+                    "pending": True,
+                }
             )
-        )  # noqa: E501
+        else:
+            comparisons.append(
+                _compare(
+                    summaries[0],
+                    summaries[1],
+                    variant_rows[0],
+                    variant_rows[1],
+                    case_ids,
+                    trials,
+                )
+            )  # noqa: E501
     digest = Path(suite_path or _SUITE_PATH)
     report = Report(
         accuracy=primary["accuracy"],

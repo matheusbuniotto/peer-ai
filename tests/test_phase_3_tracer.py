@@ -233,7 +233,7 @@ def test_results_json_is_the_shape_the_page_reads(tmp_path):
     report = json.loads((tmp_path / "results.json").read_text())
 
     assert {"accuracy", "cases", "by_flaw", "models", "generated_at"} <= report.keys()
-    assert len(report["cases"]) == 110
+    assert len(report["cases"]) == 55
     for case in report["cases"]:
         assert {
             "id",
@@ -254,15 +254,17 @@ def test_the_page_can_replay_a_trajectory(tmp_path):
     assert all({"turn", "act", "body"} <= t.keys() for t in turns)
 
 
-def test_the_no_tools_baseline_is_in_the_report(tmp_path):
+def test_the_python_only_control_is_in_the_report(tmp_path):
     run_suite(load_suite(), replay=REPLAY, out=tmp_path)
     report = json.loads((tmp_path / "results.json").read_text())
-    assert any("no tools" in m["name"] for m in report["models"])
+    pending = next(v for v in report["variants"] if "python-only" in v["label"])
+    assert pending["pending"]
+    assert pending["accuracy"] is None
 
 
 def test_the_failures_i_publish_are_still_failing(tmp_path):
     """Don't perform humility about bugs I've since fixed."""
-    run_suite(load_suite(), replay=REPLAY, out=tmp_path)
+    run_suite(load_suite(), replay=REPLAY, variants=("tools", "no-tools"), out=tmp_path)
     report = json.loads((tmp_path / "results.json").read_text())
     published = json.loads(Path("evals/published_failures.json").read_text())
     assert "scripted" not in json.dumps(published)

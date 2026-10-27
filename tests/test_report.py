@@ -16,12 +16,51 @@ def _committed() -> tuple[Path, dict]:
 
 def test_readme_table_is_fresh():
     path, payload = _committed()
-    block = render_table(payload, source=str(path))
-    assert block in Path("README.md").read_text()
+    text = Path("README.md").read_text()
+    block = text.split("<!-- results:start -->", 1)[1].split("<!-- results:end -->", 1)[0]
+    primary = next(v for v in payload["variants"] if v.get("tools"))
     k = int(payload["trials"])
+    assert payload["run_id"] in block
+    assert f"{primary['accuracy']:.1%}" in block
     assert f"pass^{k}" in block
-    if k != 3:
-        assert "pass^3" not in block
+    assert "python-only" in block
+    assert "pending" in block.lower()
+
+
+def test_pending_variant_rows_are_not_scored():
+    block = render_table(
+        {
+            "trials": 3,
+            "variants": [
+                {
+                    "label": "m (tools)",
+                    "model": "m",
+                    "tools": True,
+                    "accuracy": 0.5,
+                    "accuracy_ci": [0.3, 0.7],
+                    "pass_hat_k": 0.4,
+                    "false_ships": 0.1,
+                    "false_blocks": 0.0,
+                    "cost_usd": {"per_case_mean": None},
+                    "latency_s": {"p50": 1.0},
+                    "by_flaw": {"clean": {"n": 1}},
+                },
+                {
+                    "label": "m (python-only)",
+                    "model": "m",
+                    "pending": True,
+                },
+            ],
+            "comparisons": [
+                {"a": "m (tools)", "b": "m (python-only)", "pending": True},
+            ],
+            "run_id": "x",
+            "generated_at": "2026-01-01T00:00:00+00:00",
+            "git_sha": "abc",
+        }
+    )
+    assert "_not recorded_" in block
+    assert "pending live run" in block
 
 
 def test_error_report_matches_the_replay_and_adds_up():

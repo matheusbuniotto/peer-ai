@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 import numpy as np
 from scipy import stats
+from statsmodels.stats.contingency_tables import mcnemar as sm_mcnemar
 
 from peer_agent.types import Verdict
 
@@ -204,11 +205,14 @@ def mcnemar(a_correct: Sequence[bool], b_correct: Sequence[bool]) -> McNemarResu
     only_a = int(np.sum(a & ~b))
     only_b = int(np.sum(~a & b))
     discordant = only_a + only_b
+    both = int(np.sum(a & b))
+    neither = int(np.sum(~a & ~b))
+    table = np.array([[both, only_b], [only_a, neither]])
     if discordant < 25:
-        p_value = _exact_p(only_a, discordant)
+        p_value = float(sm_mcnemar(table, exact=True).pvalue)
         return McNemarResult(only_a, only_b, p_value, "exact")
-    statistic = (abs(only_a - only_b) - 1) ** 2 / discordant
-    return McNemarResult(only_a, only_b, float(stats.chi2.sf(statistic, 1)), "chi2_cc")
+    p_value = float(sm_mcnemar(table, exact=False, correction=True).pvalue)
+    return McNemarResult(only_a, only_b, p_value, "chi2_cc")
 
 
 def newcombe_paired(

@@ -173,7 +173,11 @@ def _print_report(report: Any) -> None:
         print(f"  {flaw:10s} {score:.1%}")
     print(f"false_ships: {report.false_ships:.1%}  false_blocks: {report.false_blocks:.1%}")
     for model in report.models:
-        print(f"  {model['name']}: {model['accuracy']:.1%}")
+        accuracy = model["accuracy"]
+        if accuracy is None:
+            print(f"  {model['name']}: not recorded (pending live run)")
+        else:
+            print(f"  {model['name']}: {accuracy:.1%}")
 
 
 def _baseline_for_gate() -> dict[str, Any]:
@@ -311,7 +315,7 @@ def _add_eval_commands(sub: Any) -> None:
     eval_p.add_argument("--replay", default="fixtures/recorded.jsonl")
     eval_p.add_argument("--model", help="Run against a real model instead of replaying.")
     eval_p.add_argument("--trials", type=int, default=1)
-    eval_p.add_argument("--variants", help="Comma-separated: tools,no-tools.")
+    eval_p.add_argument("--variants", help="Comma-separated: tools,python-only,no-tools.")
     eval_p.add_argument("--concurrency", type=int, default=1)
     eval_p.add_argument("--record", help="Write live turns as a replay JSONL.")
     eval_p.add_argument("--out", help="Directory for results.json. Nested by run id.")
