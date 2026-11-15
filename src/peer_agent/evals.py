@@ -594,7 +594,7 @@ def _git_sha() -> str:
         return subprocess.check_output(
             ["git", "rev-parse", "--short=7", "HEAD"], text=True, stderr=subprocess.DEVNULL
         ).strip()
-    except subprocess.CalledProcessError, FileNotFoundError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
 
 

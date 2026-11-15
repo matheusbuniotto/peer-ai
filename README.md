@@ -1,8 +1,10 @@
 # peer-ai
 
+[![ci](https://github.com/matheusbuniotto/peer-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/matheusbuniotto/peer-ai/actions/workflows/ci.yml)
+
 An agent that reviews and designs A/B tests with a deterministic statistics toolbox, and publishes the score of that agent with an interval.
 
-Requires Python 3.14+ and `uv`.
+Requires Python 3.12+ and `uv`.
 
 ```bash
 uv sync
@@ -39,7 +41,28 @@ The live gate (`.github/workflows/live-eval.yml`, weekly and manual) runs the su
 
 ## Results
 
-**Pending re-promotion:** the table below is from the **2026-10-16** live run on the **previous** case set (before the `peeking` / `sequential` split and related harness changes). It is kept for history until `uv run peer baseline promote` on a fresh Luna run. `uv run peer report --write-readme` renders the table; do not edit the numbers by hand.
+Two layers: **offline replay** (free, deterministic, current 55-case suite) and a **committed live table** (paid model API, frozen at promote time).
+
+**Offline replay (current case set)**
+
+Re-scores `fixtures/recorded.jsonl` against today's `evals/suite.yaml` and compares to `evals/baseline.json` → `replay_expected`. No `LLM_API_KEY` required.
+
+```bash
+uv sync
+uv run peer eval --gate replay
+```
+
+**Measured on 2026-11-15** (agent portfolio run, git at branch tip): accuracy **40.0%**; false ship **16.4%**; false block **5.5%**; regression gate **OK**. By flaw: clean 30%, novelty 90%, outliers/peeking/sequential/simpson 0%, srm 100%. The tools arm matches `replay_expected`; the python-only arm is still **not recorded** (pending live run).
+
+To refresh this paragraph after a local replay: run the command above and read the printed summary (do not hand-edit live table numbers below).
+
+**Live eval table (historical)**
+
+The markdown table is rendered from the committed run in `results/LATEST` by `uv run peer report --write-readme`. It still reflects the **2026-10-16** **live** `openai/gpt-6-luna` run (**3 trials**) on the **previous** case set (before the `peeking` / `sequential` split). It stays until someone runs a new live eval and `uv run peer baseline promote`. The python-only row remains **pending live run**.
+
+To reproduce a new live score (needs OpenRouter / `LLM_API_KEY`): `uv run peer eval --model openai/gpt-6-luna --trials 3 --gate live --out results`, then promote and `uv run peer report --write-readme`.
+
+Static UI: `uv run peer web` serves `web/` (eval report page reading `results.json` — variant bars, per-case table, trajectories).
 
 <!-- results:start -->
 

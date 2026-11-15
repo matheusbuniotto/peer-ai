@@ -3,7 +3,7 @@ name = "peerai"
 version = "0.1.0"
 description = "A skeptical A/B-test reviewer: deterministic stats, a pydantic-ai agent, and evals with uncertainty."
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.13.5",
     "pydantic-ai[skill]>=2.40.0",
@@ -41,7 +41,7 @@ build-backend = "hatchling.build"
 packages = ["src/peer_agent"]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py312"
 line-length = 92
 
 [tool.ruff.lint]
